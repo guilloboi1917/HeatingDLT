@@ -1,9 +1,10 @@
 'use client';
 
-import { useLedgerStore } from '@/shared/store/ledgerStore';
+import { useLedgerStore } from '@/shared/store/useLedgerStore';
 import { ethers } from 'ethers';
 import { useEffect, useState } from 'react';
 import { FiLogIn, FiLogOut, FiCopy, FiCheck } from 'react-icons/fi';
+import { useRouter } from 'next/navigation';
 
 export default function WalletComponent() {
     const {
@@ -20,6 +21,7 @@ export default function WalletComponent() {
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
     const [isSigning, setIsSigning] = useState(false);
+    const router = useRouter();
 
     // Initialize provider
     useEffect(() => {
@@ -85,60 +87,74 @@ export default function WalletComponent() {
         }
     };
 
+    const handleContinue = async () => {
+        if (!walletConnected) return;
+
+        router.push('/dashboard')
+    }
+
     const truncateAddress = (address: string) =>
         `${address.slice(0, 6)}...${address.slice(-4)}`;
 
     return (
-        <div className="max-w-md mx-auto bg-gray-900 rounded-xl overflow-hidden shadow-lg p-6 space-y-4">
-            {/* Network Indicator */}
-            {chainId && (
-                <div className="flex items-center justify-between bg-gray-800 px-3 py-2 rounded-lg">
-                    <span className="text-sm font-medium text-gray-300">Network</span>
-                    <span className="text-sm font-semibold text-green-400">
-                        {networkName || `Chain ID: ${chainId}`}
-                    </span>
-                </div>
-            )}
-
+        <div className="max-w-md mx-auto bg-white rounded-xl overflow-hidden shadow-lg p-4 space-y-4">
             {/* Connection Status */}
-            <div className={`p-4 rounded-lg transition-all ${walletConnected ? 'bg-green-900/20 border border-green-500' : 'bg-gray-800'}`}>
+            <div className={`p-4 rounded-lg transition-all space-y-3`}>
+                {/* Network Indicator */}
+                {chainId && (
+                    <div className="flex items-center justify-between px-4 py-3">
+                        <span className="text-base font-medium text-gray-700">Network</span>
+                        <span className="text-base font-semibold text-green-400">
+                            {networkName || `Chain ID: ${chainId}`}
+                        </span>
+                    </div>
+                )}
                 {walletConnected ? (
                     <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                            <span className="text-gray-300 text-sm">Connected as</span>
-                            <button
-                                onClick={handleDisconnect}
-                                className="flex items-center gap-1 text-red-400 hover:text-red-300 text-sm"
-                            >
-                                <FiLogOut size={14} /> Disconnect
-                            </button>
-                        </div>
+                        {/* <div className="text-center">
+                            <span className="text-black text-base">Connected as</span>
+                        </div> */}
 
-                        <div className="flex items-center justify-between bg-gray-800 px-4 py-3 rounded-lg">
-                            <span className="font-mono text-blue-300">
+                        <div className="flex items-center justify-between px-4 py-3 rounded-lg">
+                            <span className="font-mono text-gray-700">
                                 {truncateAddress(currentAddress!)}
                             </span>
                             <button
                                 onClick={copyAddress}
-                                className="text-gray-400 hover:text-white transition-colors"
+                                className="text-gray-400 hover:text-black transition-colors"
                                 aria-label="Copy address"
                             >
                                 {copied ? <FiCheck size={18} /> : <FiCopy size={18} />}
                             </button>
                         </div>
 
-                        <button
+                        {/* <button
                             onClick={handleSign}
                             disabled={isSigning}
-                            className={`w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors ${isSigning ? 'opacity-70' : ''}`}
+                            className={`w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-gray-800 hover:bg-gray-600 transition-colors ${isSigning ? 'opacity-70' : ''}`}
                         >
                             {isSigning ? 'Signing...' : 'Sign Test Message'}
+                        </button> */}
+
+                        <button
+                            onClick={handleContinue}
+                            disabled={!walletConnected}
+                            className={`flex items-center justify-between bg-black px-4 py-3 text-white rounded-lg hover:bg-gray-600 transition-colors`}
+                        >
+                            Continue to dashboard
+                        </button>
+
+                        <button
+                            onClick={handleDisconnect}
+                            className="mx-auto px-4 py-2 flex items-center gap-1 text-red-400 hover:text-red-600 text-base"
+                        >
+                            <FiLogOut size={14} /> Disconnect
                         </button>
                     </div>
                 ) : (
                     <button
                         onClick={handleConnect}
-                        className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded-lg transition-all"
+                        className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-black hover:bg-gray-600 rounded-lg transition-colors"
                     >
                         <FiLogIn size={18} /> Connect Wallet
                     </button>
@@ -149,13 +165,6 @@ export default function WalletComponent() {
             {error && (
                 <div className="p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-200 text-sm animate-pulse">
                     {error}
-                </div>
-            )}
-
-            {/* Chain Warning */}
-            {chainId && chainId !== 1 && (
-                <div className="p-3 bg-yellow-900/30 border border-yellow-700 rounded-lg text-yellow-200 text-sm">
-                    Youre not on Ethereum Mainnet
                 </div>
             )}
         </div>
