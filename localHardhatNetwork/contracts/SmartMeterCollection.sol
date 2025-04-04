@@ -68,6 +68,7 @@ contract SmartMeterCollection {
     }
 
     modifier onlyTenant() {
+        console.log(msg.sender);
         require(whitelistedTenants[msg.sender], "Not whitelisted tenant");
         _;
     }
@@ -122,6 +123,15 @@ contract SmartMeterCollection {
 
         // Also removed from mapping
         delete tenants[_tenant];
+    }
+
+    // returns smart meters assigned to a tenant
+    function getAssignedSmartMeterAddress(
+        address _tenantAddress
+    ) external view onlyTenant returns (address) {
+        return
+            smartMeters[tenants[_tenantAddress].assignedSmartMeter]
+                .smartMeterAddress;
     }
 
     function getMeterInfo(
