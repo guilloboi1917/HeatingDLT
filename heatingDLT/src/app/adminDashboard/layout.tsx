@@ -1,4 +1,4 @@
-export default function BillingLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode

@@ -179,7 +179,16 @@ export default function Billing() {
                     }}
                   >
                     <td className="p-3 text-gray-800">{data.billId}</td>
-                    <td className="p-3 text-gray-800">{data.paid ? <FiCheck size={18} /> : <FiX size={18} />}</td>
+                    {/* <td className="p-3 text-gray-800">{data.paid ? <FiCheck size={18} /> : <FiX size={18} />}</td>
+                    //  */}
+                    <td className="p-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${data.paid
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                        }`}>
+                        {data.paid ? "PAID" : "UNPAID"}
+                      </span>
+                    </td>
                     {/* <td className="p-3 text-gray-600">{data.biller}</td> */}
                     {/* <td className="p-3 text-gray-800">{data.billee}</td> */}
                     <td className="p-3 text-gray-800">{data.amountHEAT}</td>

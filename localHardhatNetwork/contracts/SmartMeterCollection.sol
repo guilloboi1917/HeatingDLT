@@ -16,8 +16,12 @@ contract SmartMeterCollection {
     // Map meter address to SmartMeter struct
     mapping(address => SmartMeter) public smartMeters;
 
+    address[] private smartMetersArray;
+
     // Map tenant address to Tenant struct
     mapping(address => Tenant) public tenants;
+
+    address[] private tenantsArray;
 
     // Map meter address to Measurement data
     // Later to be replaced with ipfs
@@ -87,6 +91,7 @@ contract SmartMeterCollection {
         address _smartMeterAddress,
         string memory _smartMeterId
     ) external onlyMaster {
+        // check that address is not also a tenant and vice versa
         require(
             !smartMeters[_smartMeterAddress].isActive,
             "Meter already exists"
@@ -101,6 +106,8 @@ contract SmartMeterCollection {
         });
 
         whitelistedMeters[_smartMeterAddress] = true;
+        smartMetersArray.push(_smartMeterAddress);
+
         emit MeterRegistered(
             _name,
             _ownerName,
@@ -108,6 +115,8 @@ contract SmartMeterCollection {
             _smartMeterId
         );
     }
+
+    // Also add remove smartmeter
 
     // Add and remove tenants
     function addTenant(
@@ -120,15 +129,43 @@ contract SmartMeterCollection {
             assignedSmartMeter: _smartMeterAddress
         });
 
-        // allow billingContract to spend up to 500 tokens from tenant account
+        // add initial supply to tenant balance
         heatToken.tenantOnboarding(_tenant, INITIAL_TENANT_SUPPLY);
+
+        tenantsArray.push(_tenant);
 
         whitelistedTenants[_tenant] = true;
     }
 
     function removeTenant(address _tenant) external onlyMaster {
         whitelistedTenants[_tenant] = false;
+
+        // Find and remove from array
+        for (uint i = 0; i < tenantsArray.length; i++) {
+            if (tenantsArray[i] == _tenant) {
+                // Swap with last element and pop (more gas efficient than shifting)
+                tenantsArray[i] = tenantsArray[tenantsArray.length - 1];
+                tenantsArray.pop();
+                break;
+            }
+        }
+        // also delete from mapping
         delete tenants[_tenant];
+    }
+
+    // returns array of addresses
+    function getTenants() external view onlyMaster returns (address[] memory) {
+        return tenantsArray;
+    }
+
+    // returns array of addresses
+    function getSmartMeters()
+        external
+        view
+        onlyMaster
+        returns (address[] memory)
+    {
+        return smartMetersArray;
     }
 
     function getAssignedSmartMeterAddress(
@@ -207,8 +244,7 @@ contract SmartMeterCollection {
         billingContract.payBill(_billId, _amount, msg.sender);
     }
 
-    function getTokenSupply(
-    ) public view onlyTenant returns (uint256) {
+    function getTokenSupply() public view onlyTenant returns (uint256) {
         return heatToken.balanceOf(msg.sender);
     }
 

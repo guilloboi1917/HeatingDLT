@@ -94,9 +94,6 @@ async function main() {
     )
     await tx.wait();
 
-    tx = await collection.connect(tenant1).payBill("1234", 10);
-    console.log(tx);
-
 }
 
 main()
