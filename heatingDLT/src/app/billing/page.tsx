@@ -24,7 +24,7 @@ export default function Billing() {
   const [loading, setIsLoading] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [payBillError, setPayBillError] = useState<string | null>(null);
-
+  const [tokenSupply, setTokenSupply] = useState<bigint | null>(null);
 
   const {
     currentAddress,
@@ -72,6 +72,9 @@ export default function Billing() {
 
       setBills(formattedData);
 
+      const supply = await contract.getTokenSupply();
+
+      setTokenSupply(supply.toString());
     }
     catch (err) {
       console.error("Failed to read bills data:", err);
@@ -127,6 +130,10 @@ export default function Billing() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 sm:p-8 bg-gray-50">
+      <h2 className="text-2xl font-bold mb-6 text-gray-800">Token Supply
+        <p className='font-medium text-gray-700'>{tokenSupply} Wei</p>
+      </h2>
+
       <div className="w-full max-w-4xl bg-white rounded-lg shadow-md p-6 mb-8">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">Bills</h2>
 

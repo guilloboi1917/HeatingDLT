@@ -93,21 +93,10 @@ async function main() {
         "1235"
     )
     await tx.wait();
-    
-    tx = await collection.connect(tenant1).getBills(tenant1);
-
-    console.log(tx);
-
-    tx = await collection.connect(tenant1).getOutstandingBalance();
-
-    tx = await collection.connect(tenant1).getTokenSupply();
-    console.log(tx)
 
     tx = await collection.connect(tenant1).payBill("1234", 10);
     console.log(tx);
 
-    tx = await collection.connect(tenant1).getTokenSupply();
-    console.log(tx)
 }
 
 main()
