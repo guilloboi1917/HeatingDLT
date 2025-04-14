@@ -8,7 +8,7 @@ async function main() {
     const SmartMeterCollection = await ethers.getContractFactory("SmartMeterCollection");
     const collection = await SmartMeterCollection.deploy(master.address);
     await collection.waitForDeployment();
-    console.log("SmartMeterCollection deployed to:", collection.address);
+    console.log("SmartMeterCollection deployed to:", collection.target);
 
     // Create collection with initial meter
     let tx = await collection.connect(master).registerSmartMeter(
@@ -77,6 +77,37 @@ async function main() {
     );
     await tx.wait();
     console.log("Recorded Meter 2 Data 2");
+
+    tx = await collection.connect(master).createBill(
+        tenant1,
+        10,
+        "First bill",
+        "1234"
+    )
+    await tx.wait();
+
+    tx = await collection.connect(master).createBill(
+        tenant1,
+        10,
+        "Second bill",
+        "1235"
+    )
+    await tx.wait();
+    
+    tx = await collection.connect(tenant1).getBills(tenant1);
+
+    console.log(tx);
+
+    tx = await collection.connect(tenant1).getOutstandingBalance();
+
+    tx = await collection.connect(tenant1).getTokenSupply();
+    console.log(tx)
+
+    tx = await collection.connect(tenant1).payBill("1234", 10);
+    console.log(tx);
+
+    tx = await collection.connect(tenant1).getTokenSupply();
+    console.log(tx)
 }
 
 main()
