@@ -1,5 +1,5 @@
 **Blockchain Heating App**
 
-HeatingDLT is deprecated and no longer used.
+HeatingDLT frontend is deprecated and no longer used.
 
-admin-dashboard is the current frontend, developed with v0. Needs adjustments to fit the backend.
+heating-dlt-frontend is the current frontend, initially developed with v0 and updated according to requirements.
