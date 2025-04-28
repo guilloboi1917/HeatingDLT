@@ -241,10 +241,11 @@ contract SmartMeterCollection {
     }
 
     function payBill(string memory _billId, uint256 _amount) public onlyTenant {
+        // return a boolean here
         billingContract.payBill(_billId, _amount, msg.sender);
     }
 
-    function getTokenSupply() public view onlyTenant returns (uint256) {
+    function getTokenBalance() public view onlyTenant returns (uint256) {
         return heatToken.balanceOf(msg.sender);
     }
 
