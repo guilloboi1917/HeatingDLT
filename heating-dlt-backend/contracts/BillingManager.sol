@@ -2,23 +2,24 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
-import "./HeatingToken.sol";
+import "./HEAT.sol";
 import "./SharedStructs.sol";
 
-contract BillingContract {
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+contract BillingManager {
+    IERC20 public heatToken;
+
     address public masterOwner;
-    HeatingToken public heatToken;
+    uint256 public heatPerKwh = 1 * 10 ** 18; // 1 HEAT = 1 kWh (with decimals)
 
-    // billing mapping, which is a set of bills mapped to tenant addresses
-    mapping(address => Bill[]) public tenantBills;
-
-    // outstanding balance
+    // Tenant => Outstanding balance (in HEAT)
     mapping(address => uint256) public outstandingBalance;
 
-    // New mapping for direct bill access by ID
+    // Bill ID => Bill
     mapping(string => Bill) public billsById;
 
-    // Mapping from tenant to their bill IDs
+    // Tenant address => array of bill IDs
     mapping(address => string[]) public tenantBillIds;
 
     // EVENTS
@@ -30,7 +31,9 @@ contract BillingContract {
         string billId
     );
 
-    constructor(address _master, HeatingToken _heatToken) {
+    event HEATBurned(uint256 amount);
+
+    constructor(address _master, IERC20 _heatToken) {
         masterOwner = _master;
         heatToken = _heatToken;
     }
@@ -40,6 +43,11 @@ contract BillingContract {
             bytes(billsById[billId].billId).length == 0,
             "Bill ID already exists"
         );
+        _;
+    }
+
+    modifier onlyMasterOwner() {
+        require(msg.sender == masterOwner, "Only MasterOwner");
         _;
     }
 
@@ -62,7 +70,6 @@ contract BillingContract {
         });
 
         // Store in both data structures
-        tenantBills[_billee].push(newBill);
         billsById[_billId] = newBill;
         tenantBillIds[_billee].push(_billId);
 
@@ -71,35 +78,22 @@ contract BillingContract {
         emit BillIssued(msg.sender, _billee, _amountHEAT, _billId);
     }
 
-    function payBill(
-        string memory _billId,
-        uint256 _amount,
-        address _billee
-    ) external {
-        // We first allow the value
-        require(
-            heatToken.approveFor(_billee, masterOwner, _amount),
-            "Couldn't approve allowance"
-        );
-
+    function payBill(string memory _billId, address _payer) external {
         Bill storage bill = billsById[_billId];
-
-        require(bytes(bill.billId).length != 0, "Bill not found");
         require(!bill.paid, "Bill already paid");
-        require(_amount == bill.amountHEAT, "Incorrect payment amount"); // necessary? Bills should be payed in full
-        require(_billee == bill.billee, "Not the bill recipient");
+        require(_payer == bill.billee, "Not the billee");
 
-        // Transfer HEAT tokens from tenant to contract
+        uint256 amount = bill.amountHEAT;
         require(
-            heatToken.transferFrom(_billee, masterOwner, _amount),
-            "Token transfer failed"
+            heatToken.transferFrom(_payer, masterOwner, amount), // Pull from _payer, not msg.sender
+            "Payment failed"
         );
 
         bill.paid = true;
         bill.datePaid = block.timestamp;
-        outstandingBalance[_billee] -= _amount;
+        outstandingBalance[_payer] -= amount;
 
-        emit PaymentMade(_billee, _amount, _billId);
+        emit PaymentMade(_payer, amount, _billId);
     }
 
     function getBills(address _tenant) external view returns (Bill[] memory) {

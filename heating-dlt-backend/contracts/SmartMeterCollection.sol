@@ -2,14 +2,14 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
-import "./HeatingToken.sol";
-import "./BillingContract.sol";
+import "./HEAT.sol";
+import "./BillingManager.sol";
 import "./SharedStructs.sol";
 
 contract SmartMeterCollection {
     address public masterOwner;
-    HeatingToken public heatToken;
-    BillingContract public billingContract;
+    HEAT public heatToken;
+    BillingManager public billingManager;
 
     uint256 public constant INITIAL_TENANT_SUPPLY = 500 * 10 ** 18;
 
@@ -67,10 +67,11 @@ contract SmartMeterCollection {
         console.log("Creating collection for", _master);
         masterOwner = _master;
 
-        // Deploy a new HeatingToken contract with initial supply
-        heatToken = new HeatingToken(1000000 * 10 ** 18, _master); // 1 million tokens with 18 decimals
+        // Deploy a new HeatingToken contract w
+        // Owner of heattoken is this smartmetercollection
+        heatToken = new HEAT(address(this));
 
-        billingContract = new BillingContract(_master, heatToken);
+        billingManager = new BillingManager(_master, heatToken);
     }
 
     // FUNCTIONS
@@ -128,9 +129,6 @@ contract SmartMeterCollection {
             fullName: _fullName,
             assignedSmartMeter: _smartMeterAddress
         });
-
-        // add initial supply to tenant balance
-        heatToken.tenantOnboarding(_tenant, INITIAL_TENANT_SUPPLY);
 
         tenantsArray.push(_tenant);
 
@@ -231,7 +229,7 @@ contract SmartMeterCollection {
         require(whitelistedTenants[_billee], "Invalid tenant address");
 
         // maybe let's create billId from hash
-        billingContract.createBill(
+        billingManager.createBill(
             _billee,
             msg.sender,
             _amountHEAT,
@@ -240,12 +238,15 @@ contract SmartMeterCollection {
         );
     }
 
-    function payBill(string memory _billId, uint256 _amount) public onlyTenant {
-        // return a boolean here
-        billingContract.payBill(_billId, _amount, msg.sender);
+    function payBillOnBehalf(string memory _billId, address payer) external {
+        billingManager.payBill(_billId, payer); // Forward msg.sender as payer
     }
 
-    function getTokenBalance() public view onlyTenant returns (uint256) {
+    function getTokenBalance() public view returns (uint256) {
+        require(
+            msg.sender == masterOwner || whitelistedTenants[msg.sender],
+            "Not authorized"
+        );
         return heatToken.balanceOf(msg.sender);
     }
 
@@ -256,10 +257,24 @@ contract SmartMeterCollection {
             "Not authorized"
         );
 
-        return billingContract.getBills(_tenant);
+        return billingManager.getBills(_tenant);
     }
 
+    // Token specific
+
     function getOutstandingBalance() external view returns (uint256) {
-        return billingContract.getOutstandingBalance(msg.sender);
+        return billingManager.getOutstandingBalance(msg.sender);
+    }
+
+    function mintHEAT(address to, uint256 amount) external onlyMaster {
+        heatToken.mint(to, amount);
+    }
+
+    function getHEATAddress() public view returns (address) {
+        require(
+            msg.sender == masterOwner || whitelistedTenants[msg.sender],
+            "Unauthorized"
+        );
+        return address(heatToken);
     }
 }
