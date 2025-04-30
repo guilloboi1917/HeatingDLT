@@ -8,6 +8,10 @@ module.exports = {
   settings: { optimizer: { enabled: true, runs: 200 } },
   networks: {
     hardhat: {
+      mining: {
+        auto: false, // Disable automining
+        interval: 125 // Mine every 1s instead
+      },
       chainId: 31337
     },
     localhost: {

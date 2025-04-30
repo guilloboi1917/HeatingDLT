@@ -238,8 +238,8 @@ contract SmartMeterCollection {
         );
     }
 
-    function payBillOnBehalf(string memory _billId, address payer) external {
-        billingManager.payBill(_billId, payer); // Forward msg.sender as payer
+    function payBillOnBehalf(string memory _billId, address payer) external returns (bool) {
+        return billingManager.payBill(_billId, payer); // Forward msg.sender as payer
     }
 
     function getTokenBalance() public view returns (uint256) {

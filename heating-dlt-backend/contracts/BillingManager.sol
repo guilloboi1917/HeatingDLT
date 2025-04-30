@@ -6,6 +6,7 @@ import "./HEAT.sol";
 import "./SharedStructs.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 
 contract BillingManager {
     IERC20 public heatToken;
@@ -78,27 +79,36 @@ contract BillingManager {
         emit BillIssued(msg.sender, _billee, _amountHEAT, _billId);
     }
 
-    function payBill(string memory _billId, address _payer) external {
+    function payBill(string memory _billId, address _payer) external returns (bool) {
         Bill storage bill = billsById[_billId];
         require(!bill.paid, "Bill already paid");
         require(_payer == bill.billee, "Not the billee");
 
         uint256 amount = bill.amountHEAT;
-        require(
-            heatToken.transferFrom(_payer, masterOwner, amount), // Pull from _payer, not msg.sender
-            "Payment failed"
-        );
+
+        // For now we only burn the tokens when paying.
+        // Could also do hybrid and burn half and transfer half
+
+        ERC20Burnable(address(heatToken)).burnFrom(_payer, amount);
+
+        // require(
+        //     heatToken.transferFrom(_payer, masterOwner, amount), // Pull from _payer, not msg.sender
+        //     "Payment failed"
+        // );
 
         bill.paid = true;
         bill.datePaid = block.timestamp;
         outstandingBalance[_payer] -= amount;
 
         emit PaymentMade(_payer, amount, _billId);
+
+        return true;
     }
 
     function getBills(address _tenant) external view returns (Bill[] memory) {
         string[] memory ids = tenantBillIds[_tenant];
         Bill[] memory result = new Bill[](ids.length);
+
 
         for (uint i = 0; i < ids.length; i++) {
             result[i] = billsById[ids[i]];

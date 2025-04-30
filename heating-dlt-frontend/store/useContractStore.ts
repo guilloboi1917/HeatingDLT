@@ -2,21 +2,40 @@ import { create } from "zustand";
 import { ethers } from "ethers";
 import { toast } from "@/components/ui/use-toast";
 import SmartMeterCollectionAbi from "@/contracts/SmartMeterCollection.json";
+import HEATAbi from "@/contracts/HEAT.json";
+import BillingManagerAbi from "@/contracts/BillingManager.json";
 import { mock } from "node:test";
 import { Tenant, SmartMeter, Bill } from "@/types/types";
 import { add } from "date-fns";
+import TokenBalance from "@/components/token-balance";
+import { RSC_ACTION_CLIENT_WRAPPER_ALIAS } from "next/dist/lib/constants";
 
 const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+
+export function parseBill(raw: any): Bill {
+  return {
+    billId: raw.billId,
+    paid: raw.paid,
+    biller: raw.biller,
+    billee: raw.billee,
+    amountHEAT: BigInt(raw.amountHEAT),
+    dateIssuance: Number(raw.dateIssuance),
+    datePaid: Number(raw.datePaid),
+    description: raw.description,
+  };
+}
 
 type ContractState = {
   provider: ethers.BrowserProvider | null;
   signer: ethers.JsonRpcSigner | null;
   account: string | null;
   contract: ethers.Contract | null;
+  tokenContract: ethers.Contract | null;
+  billingManagerContract: ethers.Contract | null;
   isConnected: boolean;
   isAdmin: boolean;
   isTenant: boolean;
-  tokenBalance: number;
+  tokenBalance: number; // maybe change to bigint and already format
 
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
@@ -28,7 +47,7 @@ type ContractState = {
 
   // billing
   getBills: (address: string) => Promise<Bill[]>;
-  payBill: (billId: string, amount: Number) => void;
+  payBill: (billId: string, amount: Number) => Promise<boolean>;
 
   // smart meter management
   getSmartMeters: () => Promise<SmartMeter[]>;
@@ -46,6 +65,8 @@ export const useContractStore = create<ContractState>((set, get) => ({
   signer: null,
   account: null,
   contract: null,
+  tokenContract: null,
+  billingManagerContract: null,
   isConnected: false,
   isAdmin: false,
   isTenant: false,
@@ -80,15 +101,31 @@ export const useContractStore = create<ContractState>((set, get) => ({
       const isTenant = role === "tenant";
 
       let tokenBalance = 0;
-      if (isTenant) {
-        tokenBalance = Number(await contract.getTokenBalance());
-      }
+      tokenBalance = Number(await contract.getTokenBalance());
+
+      const TOKENCONTRACT_ADDRESS = await contract.getHEATAddress();
+
+      const tokenContract = new ethers.Contract(
+        TOKENCONTRACT_ADDRESS,
+        HEATAbi.abi,
+        signer
+      );
+
+      const BILLINGMANAGERCONTRACT_ADDRESS = await contract.billingManager();
+
+      const billingManagerContract = new ethers.Contract(
+        BILLINGMANAGERCONTRACT_ADDRESS,
+        BillingManagerAbi.abi,
+        signer
+      );
 
       set({
         provider: web3Provider,
         signer,
         account,
         contract,
+        tokenContract,
+        billingManagerContract,
         isConnected: true,
         isAdmin,
         isTenant,
@@ -112,6 +149,8 @@ export const useContractStore = create<ContractState>((set, get) => ({
       signer: null,
       account: null,
       contract: null,
+      tokenContract: null,
+      billingManagerContract: null,
       isConnected: false,
       isAdmin: false,
       isTenant: false,
@@ -208,8 +247,12 @@ export const useContractStore = create<ContractState>((set, get) => ({
     }
 
     try {
-      const bills: Bill[] = await contract.getBills(address);
-      console.log(bills);
+      console.log("getting bills");
+      const rawBills = await contract.getBills(address);
+      console.log(rawBills);
+
+      const bills = rawBills.map(parseBill);
+
       return bills;
     } catch (err) {
       console.error("Error fetching bills for ", address, " -- ", err);
@@ -217,7 +260,59 @@ export const useContractStore = create<ContractState>((set, get) => ({
     return [] as Bill[];
   },
 
-  payBill: async (billId: string, amount: Number) => {},
+  payBill: async (billId: string, amount: Number): Promise<boolean> => {
+    const { contract, tokenContract, billingManagerContract, account } = get();
+    if (!contract || !tokenContract || !billingManagerContract) {
+      toast({
+        title: "Not connected",
+        description: "Connect wallet first.",
+        variant: "destructive",
+      });
+      // return empty array
+      return false;
+    }
+
+    console.log(contract, tokenContract, billingManagerContract);
+
+    // Convert amount to correct units (e.g., wei)
+    try {
+      // First approve tokens
+      // This is not tidy
+      try {
+        const approveTx = await tokenContract.approve(
+          billingManagerContract.target,
+          amount,
+          { gasLimit: 1000000 }
+        );
+        await approveTx.wait(); // wait for mining
+      } catch (err) {
+        console.error("Couldn't do allowance: ", err);
+      }
+
+      try {
+        const payTx = await contract.payBillOnBehalf(billId, account);
+        await payTx.wait(); // wait for mining
+      } catch (err) {
+        console.error("Couldn't pay on behalf: ", err);
+      }
+      toast({
+        title: "Payment succesful!",
+        description: "",
+      });
+
+      try {
+        const newBalance = await contract.getTokenBalance();
+        set({ tokenBalance: newBalance });
+      } catch (err) {
+        console.error("Couldn't fetch new token balance");
+      }
+
+      return true;
+    } catch (err) {
+      console.error("PAYMENT FAILED! \n", err);
+      return false;
+    }
+  },
 
   getSmartMeters: async (): Promise<SmartMeter[]> => {
     const { contract } = get();

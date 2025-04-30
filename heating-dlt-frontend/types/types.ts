@@ -17,7 +17,7 @@ export interface Bill {
   paid: boolean;
   biller: string;
   billee: string;
-  amountHEAT: number;
+  amountHEAT: bigint;
   dateIssuance: number;
   datePaid: number;
   description: string;

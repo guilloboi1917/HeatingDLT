@@ -9,12 +9,15 @@ import { AlertCircle, Flame } from "lucide-react"
 import EnergyUsage from "@/components/energy-usage"
 import TenantBills from "@/components/tenant-bills"
 import TokenBalance from "@/components/token-balance"
+import { formatUnits } from "ethers";
+import { ethers } from "ethers";
 
 export default function TenantDashboard() {
   const { account, tokenBalance } = useContractStore()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("usage")
 
+  let formattedTokenBalance = formatUnits(ethers.toBigInt(tokenBalance.toString()), "ether");
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -27,7 +30,7 @@ export default function TenantDashboard() {
         <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
           <Flame className="h-4 w-4 text-blue-600 dark:text-blue-400" />
           <AlertTitle>HEAT Token Balance</AlertTitle>
-          <AlertDescription>{tokenBalance} HEAT</AlertDescription>
+          <AlertDescription>{formattedTokenBalance} HEAT</AlertDescription>
         </Alert>
       </div>
 

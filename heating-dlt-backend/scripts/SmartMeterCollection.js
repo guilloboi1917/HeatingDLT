@@ -94,6 +94,14 @@ async function main() {
     )
     await tx.wait();
 
+    tx = await collection.connect(master).createBill(
+        tenant1,
+        ethers.parseUnits("15", 18),
+        "Third bill",
+        "1236"
+    )
+    await tx.wait();
+
     tx = await collection.connect(master).mintHEAT(master, ethers.parseUnits("1000", 18));
     console.log(tx);
 

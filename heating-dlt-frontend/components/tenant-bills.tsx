@@ -10,22 +10,45 @@ import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { formatDate } from "@/lib/utils"
 import { Bill } from "@/types/types"
+import { formatUnits } from "ethers";
+import { ethers } from "ethers";
 
 export default function TenantBills() {
   const { getBills, payBill, tokenBalance, account } = useContractStore()
   const { toast } = useToast()
   const [bills, setBills] = useState<Bill[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isPaying, setIsPaying] = useState<number | null>(null)
+  const [isPaying, setIsPaying] = useState<string | null>(null)
+
+  // Calculate statistics
+  const [unpaidBills, setUnPaidBills] = useState<Bill[]>([]);
+  const [overdueBills, setOverdueBills] = useState<Bill[]>([]);
+  const [totalUnpaid, setTotalUnpaid] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBills()
+
+  }, [isPaying])
+
+  useEffect(() => {
+    console.log("RERENDER");
   }, [])
+
 
   const fetchBills = async () => {
     try {
       setIsLoading(true)
       const fetchedBills = await getBills(account)
+      const filteredUnpaidBills = fetchedBills.filter((bill) => !bill.paid)
+
+      setUnPaidBills(filteredUnpaidBills)
+      setTotalUnpaid(formatUnits(filteredUnpaidBills.reduce((sum, bill) => sum + ethers.toBigInt(bill.amountHEAT), 0n), "ether"))
+      setOverdueBills(filteredUnpaidBills.filter((bill) => {
+        const dueDate = new Date(Number(bill.dateIssuance) * 1000)
+        dueDate.setDate(dueDate.getDate() + 30); // We set 30 days payment 
+        return dueDate < new Date()
+      }))
+
       setBills(fetchedBills)
     } catch (error) {
       console.error("Error fetching bills:", error)
@@ -54,7 +77,8 @@ export default function TenantBills() {
       const success = await payBill(billId, amount)
 
       // TODO fetch return from paybill
-      if (true) {
+      if (success) {
+        console.log("Successfully paid bill");
         toast({
           title: "Bill paid",
           description: `Your bill of ${amount} HEAT has been paid successfully`,
@@ -81,13 +105,7 @@ export default function TenantBills() {
     }
   }
 
-  // Calculate statistics
-  const unpaidBills = bills.filter((bill) => !bill.paid)
-  const totalUnpaid = unpaidBills.reduce((sum, bill) => sum + Number(bill.amountHEAT), 0)
-  const overdueBills = unpaidBills.filter((bill) => { 
-    const dueDate = new Date(Number(bill.dateIssuance) * 1000)
-    dueDate.setDate(dueDate.getDate() + 30); // We set 30 days payment 
-    return dueDate < new Date() })
+
 
   return (
     <div className="space-y-6">
@@ -136,6 +154,7 @@ export default function TenantBills() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Bill ID</TableHead>
                   <TableHead>Amount (HEAT)</TableHead>
                   <TableHead>Date Issued</TableHead>
                   <TableHead>Status</TableHead>
@@ -145,7 +164,8 @@ export default function TenantBills() {
               <TableBody>
                 {bills.map((bill, index) => (
                   <TableRow key={index}>
-                    <TableCell>{Number(bill.amountHEAT)}</TableCell>
+                    <TableCell>{bill.billId}</TableCell>
+                    <TableCell>{formatUnits(BigInt(bill.amountHEAT), "ether")}</TableCell>
                     <TableCell>{formatDate(Number(bill.dateIssuance) * 1000)}</TableCell>
                     <TableCell>
                       {bill.paid ? (
@@ -155,21 +175,29 @@ export default function TenantBills() {
                       )
                         : overdueBills.some(b => b.billId === bill.billId) ? (
                           <Badge variant="destructive">Overdue</Badge>
-                        ) 
-                        : (
-                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                            Pending
-                          </Badge>
-                        )}
+                        )
+                          : (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                              Pending
+                            </Badge>
+                          )}
                     </TableCell>
                     <TableCell className="text-right">
                       {!bill.paid && (
                         <Button
                           size="sm"
                           onClick={() => handlePayBill(bill.billId, bill.amountHEAT)}
-                          disabled={isPaying === Number(bill.billId)}
+                          disabled={isPaying === bill.billId}
+                          className={isPaying === bill.billId ? "opacity-50 cursor-not-allowed" : ""}
                         >
-                          {isPaying === Number(bill.billId) ? "Processing..." : "Pay Bill"}
+                          {isPaying === bill.billId ? (
+                            <div className="flex items-center gap-2">
+                              <LoadingSpinner className="h-4 w-4 animate-spin" />
+                              Processing...
+                            </div>
+                          ) : (
+                            "Pay Bill"
+                          )}
                         </Button>
                       )}
                     </TableCell>
