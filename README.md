@@ -10,7 +10,7 @@ heating-dlt-frontend is the current frontend, initially developed with v0 and up
 - Create new Wallet
 - Add testing network
   - Add network name: HeatingDLT
-  - Add RPC-URL: <http://localhost:3500>
+  - Add RPC-URL: <http://127.0.0.1:8545>
   - Add Chain-ID: 31337
   - Add Symbol: TNCY
   - Save
