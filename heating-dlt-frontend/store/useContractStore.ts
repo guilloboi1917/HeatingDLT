@@ -5,10 +5,15 @@ import SmartMeterCollectionAbi from "@/contracts/SmartMeterCollection.json";
 import TNCYAbi from "@/contracts/TNCY.json";
 import BillingManagerAbi from "@/contracts/BillingManager.json";
 import { mock } from "node:test";
-import { Tenant, SmartMeter, Bill, AddressInfo } from "@/types/types";
-import { add } from "date-fns";
-import TokenBalance from "@/components/token-balance";
-import { RSC_ACTION_CLIENT_WRAPPER_ALIAS } from "next/dist/lib/constants";
+import {
+  Tenant,
+  SmartMeter,
+  Bill,
+  AddressInfo,
+  DailyMeasurementData,
+} from "@/types/types";
+
+import { CID } from 'multiformats/cid';
 
 const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
@@ -25,6 +30,15 @@ export function parseBill(raw: any): Bill {
   };
 }
 
+export function parseDailyMeasurements(raw: any): DailyMeasurementData {
+  return {
+    timestamp: new Date(Number(raw.timestamp) * 1000),
+    usage: Number(raw.usage) / 1e18,
+    unit: raw.unit,
+    ipfsCID: raw.ipfsCID,
+  };
+}
+
 type ContractState = {
   provider: ethers.BrowserProvider | null;
   signer: ethers.JsonRpcSigner | null;
@@ -38,7 +52,7 @@ type ContractState = {
   tokenBalance: number; // maybe change to bigint and already format
   fullName: string | null;
   ownerName: string | null;
-  ownerContactInfo: AddressInfo;
+  ownerContactInfo: AddressInfo | null;
 
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
@@ -61,6 +75,8 @@ type ContractState = {
     smartMeterId: string
   ) => void;
   //   getSmartMeterInfo: (address: string) => Promise<SmartMeter>;
+
+  getEnergyUsage: (address: string) => Promise<DailyMeasurementData[]>;
 };
 
 export const useContractStore = create<ContractState>((set, get) => ({
@@ -197,7 +213,7 @@ export const useContractStore = create<ContractState>((set, get) => ({
       const tenants: Tenant[] = fetchedTenantsAddress.map(
         (address: string, index) => ({
           address: address,
-          name: fetchedTenantsName[index] + " (Tenant " + (index + 1) + ")"
+          name: fetchedTenantsName[index] + " (Tenant " + (index + 1) + ")",
         })
       );
 
@@ -390,7 +406,41 @@ export const useContractStore = create<ContractState>((set, get) => ({
     smartMeterId: string
   ): void => {},
 
-  // getEnergyUsage
+  getEnergyUsage: async (address: string): Promise<DailyMeasurementData[]> => {
+    const { contract } = get();
+    if (!contract) {
+      toast({
+        title: "Not connected",
+        description: "Connect wallet first.",
+        variant: "destructive",
+      });
+      // return empty array
+      return [] as DailyMeasurementData[];
+    }
+
+    try {
+      // First get the smart meter address
+      console.log("Fetching smart Meter address");
+      const assignedSmartMeterAddress =
+        await contract.getAssignedSmartMeterAddress(address);
+      if (
+        assignedSmartMeterAddress === null ||
+        assignedSmartMeterAddress === ""
+      ) {
+        console.error("Coulnd't fetch assigned smart meter address");
+        return [] as DailyMeasurementData[];
+      }
+
+      // Then get the readings
+      console.log("Fetching Energy Usage");
+      const rawEnergyUsage: DailyMeasurementData[] =
+        await contract.getDailyUsage(assignedSmartMeterAddress);
+      return rawEnergyUsage.map(parseDailyMeasurements);
+    } catch (error) {
+      console.error("Error fetching Daily Measurements:", error);
+      return [] as DailyMeasurementData[];
+    }
+  },
 
   //   addSmartMeter: async (meterId: string, location: string) => {
   //     const { contract, account } = get();

@@ -4,6 +4,26 @@ export interface Tenant {
   name?: string;
 }
 
+export interface DailyMeasurementData {
+  timestamp: Date,
+  usage: number,
+  unit: string,
+  ipfsCID: string
+}
+
+export interface HourlyData {
+  timestamp: string;
+  value: number;
+  unit: string;
+}
+
+export interface ChartData {
+  ipfsCID: string,
+  date: number,
+  usage: number,
+  formattedDate: string
+}
+
 export interface SmartMeter {
   name: string;
   ownerName: string;

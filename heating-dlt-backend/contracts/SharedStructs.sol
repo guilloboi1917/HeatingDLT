@@ -14,10 +14,11 @@ struct Tenant {
     address assignedSmartMeter;
 }
 
-struct Measurement {
+struct DailyMeasurement {
     uint256 timestamp;
-    uint256 value;
+    uint256 usage;
     string unit;
+    string ipfsCID;
 }
 
 // Who, when and how are bills issued?

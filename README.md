@@ -29,3 +29,30 @@ heating-dlt-frontend is the current frontend, initially developed with v0 and up
 - optional:
   - rename account to match function
   - add second account (order: master, meter 1, meter 2, tenant 1, tenant 2)
+
+- Finally:
+  - Install Kubo (IPFS Node)
+  - Configure ~/.ipfs/config and add the following lines in the first "API" property:
+  
+  "HTTPHeaders": {
+      "Access-Control-Allow-Credentials": [
+        "true"
+      ],
+      "Access-Control-Allow-Headers": [
+        "Authorization"
+      ],
+      "Access-Control-Allow-Methods": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "Access-Control-Allow-Origin": [
+        "http://localhost:3500"
+      ],
+      "Access-Control-Expose-Headers": [
+        "Location",
+        "Content-Type"
+      ]
+    }

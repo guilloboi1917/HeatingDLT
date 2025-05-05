@@ -13,8 +13,6 @@ contract SmartMeterCollection {
 
     AddressInfo private masterContactInfo;
 
-    uint256 public constant INITIAL_TENANT_SUPPLY = 500 * 10 ** 18;
-
     // Map meter address to SmartMeter struct
     mapping(address => SmartMeter) public smartMeters;
 
@@ -29,7 +27,8 @@ contract SmartMeterCollection {
 
     // Map meter address to Measurement data
     // Later to be replaced with ipfs
-    mapping(address => Measurement[]) public meterData;
+    mapping(address => DailyMeasurement[]) dailyEnergyUsage;
+    mapping(address => string[]) detailedUsageIPFS;
 
     // Whitelist meters
     mapping(address => bool) private whitelistedMeters;
@@ -151,7 +150,9 @@ contract SmartMeterCollection {
                 // Swap with last element and pop (more gas efficient than shifting)
                 tenantsArray[i] = tenantsArray[tenantsArray.length - 1];
                 tenantsArray.pop();
-                tenantNamesArray[i] = tenantNamesArray[tenantNamesArray.length - 1];
+                tenantNamesArray[i] = tenantNamesArray[
+                    tenantNamesArray.length - 1
+                ];
                 tenantNamesArray.pop();
                 break;
             }
@@ -161,12 +162,19 @@ contract SmartMeterCollection {
     }
 
     // returns array of addresses
-    function getTenants() external view onlyMaster returns (address[] memory, string[] memory) {
+    function getTenants()
+        external
+        view
+        onlyMaster
+        returns (address[] memory, string[] memory)
+    {
         return (tenantsArray, tenantNamesArray);
     }
 
     // Get the tenant's name
-    function getTenantName(address _tenant) external view onlyTenant returns (string memory) {
+    function getTenantName(
+        address _tenant
+    ) external view onlyTenant returns (string memory) {
         return tenants[_tenant].fullName;
     }
 
@@ -208,30 +216,40 @@ contract SmartMeterCollection {
         return smartMeters[_meterAddress];
     }
 
-    function recordData(
-        uint256 _value,
-        string calldata _unit
+    // We store the usage here, and detailed summaries to ipfs
+    function recordDailyUsage(
+        uint256 timestamp,
+        uint256 _usage,
+        string calldata _unit,
+        string calldata _ipfsCID // Store raw bytes
     ) external onlyWhitelistedActiveMeter {
-        meterData[msg.sender].push(
-            Measurement({
-                timestamp: block.timestamp,
-                value: _value,
-                unit: _unit
+        dailyEnergyUsage[msg.sender].push(
+            DailyMeasurement({
+                timestamp: timestamp, // maybe other than block timestamp would be good for testing
+                usage: _usage,
+                unit: _unit,
+                ipfsCID: _ipfsCID
             })
         );
-        emit DataRecorded(msg.sender, block.timestamp, _value);
+        emit DataRecorded(msg.sender, block.timestamp, _usage);
     }
 
-    function getMeterData(
+    function storeDetailedUsage(
+        string calldata _ipfsCID
+    ) external onlyWhitelistedActiveMeter {
+        detailedUsageIPFS[msg.sender].push(_ipfsCID);
+    }
+
+    function getDailyUsage(
         address _meterAddress
-    ) external view returns (Measurement[] memory) {
+    ) external view returns (DailyMeasurement[] memory) {
         require(
             msg.sender == masterOwner ||
                 (whitelistedTenants[msg.sender] &&
                     tenants[msg.sender].assignedSmartMeter == _meterAddress),
             "Not authorized"
         );
-        return meterData[_meterAddress];
+        return dailyEnergyUsage[_meterAddress];
     }
 
     // Master can withdraw collected payments
@@ -262,7 +280,10 @@ contract SmartMeterCollection {
         );
     }
 
-    function payBillOnBehalf(string memory _billId, address payer) external returns (bool) {
+    function payBillOnBehalf(
+        string memory _billId,
+        address payer
+    ) external returns (bool) {
         return billingManager.payBill(_billId, payer); // Forward msg.sender as payer
     }
 
