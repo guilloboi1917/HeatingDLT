@@ -27,8 +27,18 @@ struct Bill {
     bool paid;
     address biller;
     address billee;
-    uint256 amountHEAT;
+    uint256 amountTNCY;
     uint256 dateIssuance;
     uint256 datePaid;
     string description;
+}
+
+struct AddressInfo {
+    string ownerName;
+    string streetName;
+    string cityCode;
+    string cityName;
+    string country;
+    string email;
+    string phone;
 }

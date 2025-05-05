@@ -2,14 +2,16 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
-import "./HEAT.sol";
+import "./TNCY.sol";
 import "./BillingManager.sol";
 import "./SharedStructs.sol";
 
 contract SmartMeterCollection {
     address public masterOwner;
-    HEAT public heatToken;
+    TNCY public heatToken;
     BillingManager public billingManager;
+
+    AddressInfo private masterContactInfo;
 
     uint256 public constant INITIAL_TENANT_SUPPLY = 500 * 10 ** 18;
 
@@ -22,6 +24,8 @@ contract SmartMeterCollection {
     mapping(address => Tenant) public tenants;
 
     address[] private tenantsArray;
+
+    string[] private tenantNamesArray;
 
     // Map meter address to Measurement data
     // Later to be replaced with ipfs
@@ -63,13 +67,14 @@ contract SmartMeterCollection {
     }
 
     // Constructor for Smart Meter Collection
-    constructor(address _master) {
+    constructor(address _master, AddressInfo memory _ownerContactInfo) {
         console.log("Creating collection for", _master);
         masterOwner = _master;
+        masterContactInfo = _ownerContactInfo;
 
         // Deploy a new HeatingToken contract w
         // Owner of heattoken is this smartmetercollection
-        heatToken = new HEAT(address(this));
+        heatToken = new TNCY(address(this));
 
         billingManager = new BillingManager(_master, heatToken);
     }
@@ -132,6 +137,8 @@ contract SmartMeterCollection {
 
         tenantsArray.push(_tenant);
 
+        tenantNamesArray.push(_fullName);
+
         whitelistedTenants[_tenant] = true;
     }
 
@@ -144,6 +151,8 @@ contract SmartMeterCollection {
                 // Swap with last element and pop (more gas efficient than shifting)
                 tenantsArray[i] = tenantsArray[tenantsArray.length - 1];
                 tenantsArray.pop();
+                tenantNamesArray[i] = tenantNamesArray[tenantNamesArray.length - 1];
+                tenantNamesArray.pop();
                 break;
             }
         }
@@ -152,8 +161,23 @@ contract SmartMeterCollection {
     }
 
     // returns array of addresses
-    function getTenants() external view onlyMaster returns (address[] memory) {
-        return tenantsArray;
+    function getTenants() external view onlyMaster returns (address[] memory, string[] memory) {
+        return (tenantsArray, tenantNamesArray);
+    }
+
+    // Get the tenant's name
+    function getTenantName(address _tenant) external view onlyTenant returns (string memory) {
+        return tenants[_tenant].fullName;
+    }
+
+    // Get the owner's name
+    function getOwnerName() external view returns (string memory) {
+        return masterContactInfo.ownerName;
+    }
+
+    // Get the owner's contact info
+    function getOwnerContactInfo() external view returns (AddressInfo memory) {
+        return masterContactInfo;
     }
 
     // returns array of addresses
@@ -222,7 +246,7 @@ contract SmartMeterCollection {
     // WRAPPERS FOR BILLINGCONTRACT
     function createBill(
         address _billee,
-        uint256 _amountHEAT,
+        uint256 _amountTNCY,
         string memory _description,
         string memory _billId
     ) public onlyMaster {
@@ -232,7 +256,7 @@ contract SmartMeterCollection {
         billingManager.createBill(
             _billee,
             msg.sender,
-            _amountHEAT,
+            _amountTNCY,
             _description,
             _billId
         );
@@ -266,11 +290,11 @@ contract SmartMeterCollection {
         return billingManager.getOutstandingBalance(msg.sender);
     }
 
-    function mintHEAT(address to, uint256 amount) external onlyMaster {
+    function mintTNCY(address to, uint256 amount) external onlyMaster {
         heatToken.mint(to, amount);
     }
 
-    function getHEATAddress() public view returns (address) {
+    function getTNCYAddress() public view returns (address) {
         require(
             msg.sender == masterOwner || whitelistedTenants[msg.sender],
             "Unauthorized"

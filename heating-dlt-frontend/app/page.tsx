@@ -34,9 +34,16 @@ export default function Home() {
     <main className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <div className="max-w-7xl mx-auto">
         <header className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100">Heating DLT Dashboard</h1>
+          <div className="flex items-center space-x-4">
+            <img
+              src="/Tency Logo.png"
+              alt="Tency Logo"
+              className="h-20 w-20 object-contain rounded-lg"
+            />
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100">Heating DLT Dashboard</h1>
+          </div>
           <p className="text-slate-600 dark:text-slate-300 mt-2">
-            Manage your heating system with blockchain technology
+            Manage your heating system with blockchain technology by Tency.
           </p>
         </header>
 

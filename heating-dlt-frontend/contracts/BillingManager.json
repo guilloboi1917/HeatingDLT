@@ -60,7 +60,7 @@
           "type": "uint256"
         }
       ],
-      "name": "HEATBurned",
+      "name": "TNCYBurned",
       "type": "event"
     },
     {
@@ -120,7 +120,7 @@
         },
         {
           "internalType": "uint256",
-          "name": "amountHEAT",
+          "name": "amountTNCY",
           "type": "uint256"
         },
         {
@@ -156,7 +156,7 @@
         },
         {
           "internalType": "uint256",
-          "name": "_amountHEAT",
+          "name": "_amountTNCY",
           "type": "uint256"
         },
         {
@@ -209,7 +209,7 @@
             },
             {
               "internalType": "uint256",
-              "name": "amountHEAT",
+              "name": "amountTNCY",
               "type": "uint256"
             },
             {

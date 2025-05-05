@@ -9,6 +9,48 @@
           "internalType": "address",
           "name": "_master",
           "type": "address"
+        },
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "ownerName",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "streetName",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "cityCode",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "cityName",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "country",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "email",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "phone",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct AddressInfo",
+          "name": "",
+          "type": "tuple"
         }
       ],
       "stateMutability": "nonpayable",
@@ -128,7 +170,7 @@
         },
         {
           "internalType": "uint256",
-          "name": "_amountHEAT",
+          "name": "_amountTNCY",
           "type": "uint256"
         },
         {
@@ -200,7 +242,7 @@
             },
             {
               "internalType": "uint256",
-              "name": "amountHEAT",
+              "name": "amountTNCY",
               "type": "uint256"
             },
             {
@@ -229,7 +271,7 @@
     },
     {
       "inputs": [],
-      "name": "getHEATAddress",
+      "name": "getTNCYAddress",
       "outputs": [
         {
           "internalType": "address",
@@ -369,6 +411,93 @@
           "internalType": "address[]",
           "name": "",
           "type": "address[]"
+        },
+        {
+          "internalType": "string[]",
+          "name": "",
+          "type": "string[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_account",
+          "type": "address"
+        }
+      ],
+      "name": "getTenantName",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getOwnerName",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getOwnerContactInfo",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "ownerName",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "streetName",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "cityCode",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "cityName",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "country",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "email",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "phone",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct AddressInfo",
+          "name": "",
+          "type": "tuple"
         }
       ],
       "stateMutability": "view",
@@ -392,7 +521,7 @@
       "name": "heatToken",
       "outputs": [
         {
-          "internalType": "contract HEAT",
+          "internalType": "contract TNCY",
           "name": "",
           "type": "address"
         }
@@ -460,7 +589,7 @@
           "type": "uint256"
         }
       ],
-      "name": "mintHEAT",
+      "name": "mintTNCY",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

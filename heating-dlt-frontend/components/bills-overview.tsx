@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { formatDate } from "@/lib/utils"
 import { Tenant, Bill } from "@/types/types"
+import { formatUnits, ethers } from "ethers";
 
 // Lots to do here, date formatting etc etc.
 
@@ -56,7 +57,10 @@ export default function BillsOverview() {
 
   // Calculate statistics
   const unpaidBills = bills.filter((bill) => !bill.paid)
-  const totalUnpaid = unpaidBills.reduce((sum, bill) => sum + Number(bill.amountHEAT), 0)
+  const totalUnpaid = unpaidBills.reduce((sum, bill) => sum + Number(bill.amountTNCY), 0)
+
+  let formattedTotalUnpaid = formatUnits(ethers.toBigInt(totalUnpaid.toString()), "ether");
+
   const overdueBills = unpaidBills.filter((bill) => {
     const dueDate = new Date(Number(bill.dateIssuance) * 1000)
     dueDate.setDate(dueDate.getDate() + 30); // We set 30 days payment 
@@ -80,7 +84,7 @@ export default function BillsOverview() {
             <CardTitle>Total Due</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{totalUnpaid} HEAT</div>
+            <div className="text-3xl font-bold">{formattedTotalUnpaid} TNCY</div>
           </CardContent>
         </Card>
 
@@ -111,7 +115,7 @@ export default function BillsOverview() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Tenant</TableHead>
-                  <TableHead>Amount (HEAT)</TableHead>
+                  <TableHead>Amount (TNCY)</TableHead>
                   <TableHead>Date Issued</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
@@ -120,7 +124,7 @@ export default function BillsOverview() {
                 {bills.map((bill, index) => (
                   <TableRow key={index}>
                     <TableCell>{getTenantName(bill.billee)}</TableCell>
-                    <TableCell>{Number(bill.amountHEAT)}</TableCell>
+                    <TableCell>{formatUnits(BigInt(bill.amountTNCY), "ether")}</TableCell>
                     <TableCell>{formatDate(Number(bill.dateIssuance) * 1000)}</TableCell>
                     <TableCell>
                       {bill.paid ? (

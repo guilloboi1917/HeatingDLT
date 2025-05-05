@@ -17,8 +17,18 @@ export interface Bill {
   paid: boolean;
   biller: string;
   billee: string;
-  amountHEAT: bigint;
+  amountTNCY: bigint;
   dateIssuance: number;
   datePaid: number;
   description: string;
+}
+
+export interface AddressInfo {
+  ownerName: string;
+  streetName: string;
+  cityCode: string;
+  cityName: string;
+  country: string;
+  email: string;
+  phone: string;
 }

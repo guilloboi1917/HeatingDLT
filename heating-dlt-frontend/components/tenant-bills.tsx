@@ -10,8 +10,7 @@ import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { formatDate } from "@/lib/utils"
 import { Bill } from "@/types/types"
-import { formatUnits } from "ethers";
-import { ethers } from "ethers";
+import { formatUnits, ethers } from "ethers";
 
 export default function TenantBills() {
   const { getBills, payBill, tokenBalance, account } = useContractStore()
@@ -21,7 +20,7 @@ export default function TenantBills() {
   const [isPaying, setIsPaying] = useState<string | null>(null)
 
   // Calculate statistics
-  const [unpaidBills, setUnPaidBills] = useState<Bill[]>([]);
+  const [unpaidBills, setUnpaidBills] = useState<Bill[]>([]);
   const [overdueBills, setOverdueBills] = useState<Bill[]>([]);
   const [totalUnpaid, setTotalUnpaid] = useState<string | null>(null);
 
@@ -41,8 +40,8 @@ export default function TenantBills() {
       const fetchedBills = await getBills(account)
       const filteredUnpaidBills = fetchedBills.filter((bill) => !bill.paid)
 
-      setUnPaidBills(filteredUnpaidBills)
-      setTotalUnpaid(formatUnits(filteredUnpaidBills.reduce((sum, bill) => sum + ethers.toBigInt(bill.amountHEAT), 0n), "ether"))
+      setUnpaidBills(filteredUnpaidBills)
+      setTotalUnpaid(formatUnits(filteredUnpaidBills.reduce((sum, bill) => sum + ethers.toBigInt(bill.amountTNCY), 0n), "ether"))
       setOverdueBills(filteredUnpaidBills.filter((bill) => {
         const dueDate = new Date(Number(bill.dateIssuance) * 1000)
         dueDate.setDate(dueDate.getDate() + 30); // We set 30 days payment 
@@ -66,7 +65,7 @@ export default function TenantBills() {
     if (tokenBalance < amount) {
       toast({
         title: "Insufficient tokens",
-        description: "You don't have enough HEAT tokens to pay this bill. Please top up your balance.",
+        description: "You don't have enough TNCY tokens to pay this bill. Please top up your balance.",
         variant: "destructive",
       })
       return
@@ -81,7 +80,7 @@ export default function TenantBills() {
         console.log("Successfully paid bill");
         toast({
           title: "Bill paid",
-          description: `Your bill of ${amount} HEAT has been paid successfully`,
+          description: `Your bill of ${amount} TNCY has been paid successfully`,
         })
 
         // Refresh the bills list
@@ -124,7 +123,7 @@ export default function TenantBills() {
             <CardTitle>Total Due</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{totalUnpaid} HEAT</div>
+            <div className="text-3xl font-bold">{totalUnpaid} TNCY</div>
           </CardContent>
         </Card>
 
@@ -155,7 +154,7 @@ export default function TenantBills() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Bill ID</TableHead>
-                  <TableHead>Amount (HEAT)</TableHead>
+                  <TableHead>Amount (TNCY)</TableHead>
                   <TableHead>Date Issued</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Action</TableHead>
@@ -165,7 +164,7 @@ export default function TenantBills() {
                 {bills.map((bill, index) => (
                   <TableRow key={index}>
                     <TableCell>{bill.billId}</TableCell>
-                    <TableCell>{formatUnits(BigInt(bill.amountHEAT), "ether")}</TableCell>
+                    <TableCell>{formatUnits(BigInt(bill.amountTNCY), "ether")}</TableCell>
                     <TableCell>{formatDate(Number(bill.dateIssuance) * 1000)}</TableCell>
                     <TableCell>
                       {bill.paid ? (
@@ -186,7 +185,7 @@ export default function TenantBills() {
                       {!bill.paid && (
                         <Button
                           size="sm"
-                          onClick={() => handlePayBill(bill.billId, bill.amountHEAT)}
+                          onClick={() => handlePayBill(bill.billId, bill.amountTNCY)}
                           disabled={isPaying === bill.billId}
                           className={isPaying === bill.billId ? "opacity-50 cursor-not-allowed" : ""}
                         >

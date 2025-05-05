@@ -6,7 +6,18 @@ async function main() {
 
     // Deploy factory
     const SmartMeterCollection = await ethers.getContractFactory("SmartMeterCollection");
-    const collection = await SmartMeterCollection.deploy(master.address);
+    const collection = await SmartMeterCollection.deploy(
+        master.address,
+        {
+            ownerName: "Heating Company",
+            streetName: "Binzmühlstrasse 19",
+            cityCode:"8045",
+            cityName: "Zürich",
+            country: "Switzerland",
+            email: "zh.heating@hc.com",
+            phone: "+41795338161"
+        }
+    );
     await collection.waitForDeployment();
     console.log("SmartMeterCollection deployed to:", collection.target);
 
@@ -102,38 +113,38 @@ async function main() {
     )
     await tx.wait();
 
-    tx = await collection.connect(master).mintHEAT(master, ethers.parseUnits("1000", 18));
+    tx = await collection.connect(master).mintTNCY(master, ethers.parseUnits("1000", 18));
     console.log(tx);
 
     tx = await collection.connect(master).getTokenBalance();
     console.log(tx);
 
-    // Now let's say tenant pay a landlord money for pellets and also gets some HEAT minted
-    tx = await collection.connect(master).mintHEAT(tenant1, ethers.parseUnits("500", 18));
+    // Now let's say tenant pay a landlord money for pellets and also gets some TNCY minted
+    tx = await collection.connect(master).mintTNCY(tenant1, ethers.parseUnits("500", 18));
 
     // they check their token balance
     tx = await collection.connect(tenant1).getTokenBalance();
     console.log(tx);
 
-    // Get the HEAT token address
-    const heatTokenAddress = await collection.connect(tenant1).getHEATAddress();
-    console.log("HEAT Token Address:", heatTokenAddress);
+    // Get the TNCY token address
+    const heatTokenAddress = await collection.connect(tenant1).getTNCYAddress();
+    console.log("TNCY Token Address:", heatTokenAddress);
 
-    // Create a contract instance for the HEAT token
-    const HeatToken = await ethers.getContractFactory("HEAT");
+    // Create a contract instance for the TNCY token
+    const HeatToken = await ethers.getContractFactory("TNCY");
     const heatToken = HeatToken.attach(heatTokenAddress);
 
     // 1. Get BillingManager address from SmartMeterCollection
     const billingManagerAddress = await collection.billingManager();
     console.log("BillingManager Address:", billingManagerAddress);
 
-    // 2. Approve BillingManager (not SmartMeterCollection) to spend HEAT
+    // 2. Approve BillingManager (not SmartMeterCollection) to spend TNCY
     const approveTx = await heatToken.connect(tenant1).approve(
         billingManagerAddress, // Approve BillingManager, not SmartMeterCollection
         ethers.parseUnits("1000", 18)
     );
     await approveTx.wait();
-    console.log("Approved BillingManager to spend HEAT");
+    console.log("Approved BillingManager to spend TNCY");
 
     // 3. Now pay the bill
     const payBillTx = await collection.connect(tenant1).payBillOnBehalf("1234", tenant1.address);

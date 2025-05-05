@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useContractStore } from "@/store/useContractStore"
 import { useToast } from "@/components/ui/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { formatUnits, ethers } from "ethers";
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,6 +15,8 @@ export default function TokenBalance() {
   const { toast } = useToast()
   const [topUpAmount, setTopUpAmount] = useState<number>(100)
   const [isProcessing, setIsProcessing] = useState(false)
+
+  let formattedTokenBalance = formatUnits(ethers.toBigInt(tokenBalance.toString()), "ether");
 
   const handleTopUp = async () => {
     console.log("Topped up")
@@ -34,12 +37,12 @@ export default function TokenBalance() {
     //   if (success) {
     //     toast({
     //       title: "Top-up successful",
-    //       description: `Successfully added ${topUpAmount} HEAT tokens to your balance`,
+    //       description: `Successfully added ${topUpAmount} TNCY tokens to your balance`,
     //     })
     //   } else {
     //     toast({
     //       title: "Top-up failed",
-    //       description: "Failed to top up your HEAT tokens. Please try again.",
+    //       description: "Failed to top up your TNCY tokens. Please try again.",
     //       variant: "destructive",
     //     })
     //   }
@@ -47,7 +50,7 @@ export default function TokenBalance() {
     //   console.error("Error topping up tokens:", error)
     //   toast({
     //     title: "Top-up failed",
-    //     description: "Failed to top up your HEAT tokens. Please try again.",
+    //     description: "Failed to top up your TNCY tokens. Please try again.",
     //     variant: "destructive",
     //   })
     // } finally {
@@ -64,13 +67,13 @@ export default function TokenBalance() {
               <Flame className="h-8 w-8 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
-          <CardTitle className="text-center">HEAT Token Balance</CardTitle>
+          <CardTitle className="text-center">TNCY Token Balance</CardTitle>
           <CardDescription className="text-center">Your current heating token balance</CardDescription>
         </CardHeader>
         <CardContent className="text-center">
-          <div className="text-5xl font-bold mb-6">{tokenBalance}</div>
+          <div className="text-5xl font-bold mb-6">{formattedTokenBalance}</div>
           <p className="text-slate-600 dark:text-slate-300 mb-6">
-            HEAT tokens are used to pay for your heating bills. Top up your balance to ensure uninterrupted service.
+          TNCY tokens are used to pay for your heating bills. Top up your balance to ensure uninterrupted service.
           </p>
 
           <div className="space-y-4">
@@ -89,7 +92,7 @@ export default function TokenBalance() {
         </CardContent>
         <CardFooter>
           <Button className="w-full" onClick={handleTopUp} disabled={isProcessing || !topUpAmount || topUpAmount <= 0}>
-            {isProcessing ? "Processing..." : `Top Up ${topUpAmount} HEAT Tokens`}
+            {isProcessing ? "Processing..." : `Top Up ${topUpAmount} TNCY Tokens`}
           </Button>
         </CardFooter>
       </Card>
@@ -97,14 +100,14 @@ export default function TokenBalance() {
       <Card>
         <CardHeader>
           <CardTitle>Token Usage Guide</CardTitle>
-          <CardDescription>How HEAT tokens work in the heating system</CardDescription>
+          <CardDescription>How TNCY tokens work in the heating system</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div>
-              <h3 className="font-semibold mb-1">What are HEAT tokens?</h3>
+              <h3 className="font-semibold mb-1">What are TNCY tokens?</h3>
               <p className="text-slate-600 dark:text-slate-300">
-                HEAT tokens are the digital currency used to pay for heating services in this building. Each token
+              TNCY tokens are the digital currency used to pay for heating services in this building. Each token
                 represents a unit of heating energy.
               </p>
             </div>
@@ -112,7 +115,7 @@ export default function TokenBalance() {
             <div>
               <h3 className="font-semibold mb-1">How to use tokens</h3>
               <p className="text-slate-600 dark:text-slate-300">
-                Your heating usage is automatically measured by smart meters and billed in HEAT tokens. Ensure you have
+                Your heating usage is automatically measured by smart meters and billed in TNCY tokens. Ensure you have
                 enough tokens to cover your bills to avoid service interruptions.
               </p>
             </div>
@@ -120,7 +123,7 @@ export default function TokenBalance() {
             <div>
               <h3 className="font-semibold mb-1">Token conversion rate</h3>
               <p className="text-slate-600 dark:text-slate-300">
-                1 HEAT token = 0.01 ETH. When you top up, your ETH is converted to HEAT tokens at this rate.
+                1 TNCY token = 0.01 ETH. When you top up, your ETH is converted to TNCY tokens at this rate.
               </p>
             </div>
           </div>

@@ -11,7 +11,7 @@ import SmartMeterManagement from "@/components/smart-meter-management"
 import BillsOverview from "@/components/bills-overview"
 
 export default function AdminDashboard() {
-  const { account } = useContractStore()
+  const { account, ownerName } = useContractStore()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("tenants")
 
@@ -20,7 +20,8 @@ export default function AdminDashboard() {
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Admin Dashboard</AlertTitle>
-        <AlertDescription>Connected as {account}</AlertDescription>
+        <AlertDescription>Connected as {ownerName}</AlertDescription>
+        <AlertDescription>With account {account}</AlertDescription>
       </Alert>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

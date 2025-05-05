@@ -6,15 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useWeb3 } from "@/hooks/use-web3"
 import { Thermometer, BarChart3, Settings, AlertCircle } from "lucide-react"
 import MeterReadings from "@/components/meter-readings"
 import TenantManagement from "@/components/tenant-management"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { useContractStore } from "@/store/useContractStore"
 
 export default function HeatingDashboard() {
   const { toast } = useToast()
-  const { account, contract, isConnected, connectWallet, isOwner } = useWeb3()
+  const { account, contract, isConnected, connectWallet, isAdmin } = useContractStore()
   const [currentTemperature, setCurrentTemperature] = useState<number | null>(null)
   const [targetTemperature, setTargetTemperature] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -130,7 +130,7 @@ export default function HeatingDashboard() {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="readings">Meter Readings</TabsTrigger>
-          {isOwner && <TabsTrigger value="management">Management</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="management">Management</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="dashboard" className="space-y-4 mt-4">
@@ -167,7 +167,7 @@ export default function HeatingDashboard() {
                   </Button>
                   <Input
                     type="number"
-                    value={targetTemperature || ""}
+                    value={targetTemperature ?? ""}
                     onChange={(e) => setTargetTemperature(Number(e.target.value))}
                     min={16}
                     max={30}
@@ -211,7 +211,7 @@ export default function HeatingDashboard() {
           <MeterReadings />
         </TabsContent>
 
-        {isOwner && (
+        {isAdmin && (
           <TabsContent value="management" className="mt-4">
             <TenantManagement />
           </TabsContent>

@@ -33,9 +33,10 @@ contract SmartMeterCollectionFactory {
         string memory _name,
         string memory _ownerName,
         address _smartMeterAddress,
-        string memory _smartMeterId
-    ) external onlyMaster returns (address) {
-        SmartMeterCollection newContract = new SmartMeterCollection(msg.sender);
+        string memory _smartMeterId,
+        AddressInfo memory _ownerContactInfo
+    ) external onlyMaster returns (address, AddressInfo memory) {
+        SmartMeterCollection newContract = new SmartMeterCollection(msg.sender, _ownerContactInfo);
 
         // Register the initial smart meter during creation
         newContract.registerSmartMeter(
@@ -47,7 +48,7 @@ contract SmartMeterCollectionFactory {
 
         masterContracts[msg.sender].push(address(newContract));
         emit ContractCreated(address(newContract), msg.sender);
-        return address(newContract);
+        return (address(newContract), _ownerContactInfo);
     }
 
     function getMasterContracts() external view returns (address[] memory) {

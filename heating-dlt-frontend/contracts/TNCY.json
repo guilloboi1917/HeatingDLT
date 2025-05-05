@@ -1,7 +1,7 @@
 {
   "_format": "hh-sol-artifact-1",
-  "contractName": "HEAT",
-  "sourceName": "contracts/HEAT.sol",
+  "contractName": "TNCY",
+  "sourceName": "contracts/TNCY.sol",
   "abi": [
     {
       "inputs": [

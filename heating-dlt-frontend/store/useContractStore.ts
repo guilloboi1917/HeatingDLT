@@ -2,10 +2,10 @@ import { create } from "zustand";
 import { ethers } from "ethers";
 import { toast } from "@/components/ui/use-toast";
 import SmartMeterCollectionAbi from "@/contracts/SmartMeterCollection.json";
-import HEATAbi from "@/contracts/HEAT.json";
+import TNCYAbi from "@/contracts/TNCY.json";
 import BillingManagerAbi from "@/contracts/BillingManager.json";
 import { mock } from "node:test";
-import { Tenant, SmartMeter, Bill } from "@/types/types";
+import { Tenant, SmartMeter, Bill, AddressInfo } from "@/types/types";
 import { add } from "date-fns";
 import TokenBalance from "@/components/token-balance";
 import { RSC_ACTION_CLIENT_WRAPPER_ALIAS } from "next/dist/lib/constants";
@@ -18,7 +18,7 @@ export function parseBill(raw: any): Bill {
     paid: raw.paid,
     biller: raw.biller,
     billee: raw.billee,
-    amountHEAT: BigInt(raw.amountHEAT),
+    amountTNCY: BigInt(raw.amountTNCY),
     dateIssuance: Number(raw.dateIssuance),
     datePaid: Number(raw.datePaid),
     description: raw.description,
@@ -36,6 +36,9 @@ type ContractState = {
   isAdmin: boolean;
   isTenant: boolean;
   tokenBalance: number; // maybe change to bigint and already format
+  fullName: string | null;
+  ownerName: string | null;
+  ownerContactInfo: AddressInfo;
 
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
@@ -71,6 +74,9 @@ export const useContractStore = create<ContractState>((set, get) => ({
   isAdmin: false,
   isTenant: false,
   tokenBalance: 0,
+  fullName: null,
+  ownerName: null,
+  ownerContactInfo: null,
 
   connectWallet: async () => {
     if (typeof window === "undefined" || !window.ethereum) {
@@ -100,14 +106,21 @@ export const useContractStore = create<ContractState>((set, get) => ({
       const isAdmin = role === "admin";
       const isTenant = role === "tenant";
 
+      let fullName = null;
+      if (isTenant) {
+        fullName = await contract.getTenantName(account);
+      }
+      const ownerName = await contract.getOwnerName();
+      const ownerContactInfo = await contract.getOwnerContactInfo();
+
       let tokenBalance = 0;
       tokenBalance = Number(await contract.getTokenBalance());
 
-      const TOKENCONTRACT_ADDRESS = await contract.getHEATAddress();
+      const TOKENCONTRACT_ADDRESS = await contract.getTNCYAddress();
 
       const tokenContract = new ethers.Contract(
         TOKENCONTRACT_ADDRESS,
-        HEATAbi.abi,
+        TNCYAbi.abi,
         signer
       );
 
@@ -130,6 +143,9 @@ export const useContractStore = create<ContractState>((set, get) => ({
         isAdmin,
         isTenant,
         tokenBalance,
+        fullName,
+        ownerName,
+        ownerContactInfo,
       });
 
       toast({ title: "Connected", description: "Wallet connected!" });
@@ -155,6 +171,9 @@ export const useContractStore = create<ContractState>((set, get) => ({
       isAdmin: false,
       isTenant: false,
       tokenBalance: 0,
+      fullName: null,
+      ownerName: null,
+      ownerContactInfo: null,
     });
 
     toast({ title: "Disconnected", description: "Wallet disconnected." });
@@ -171,12 +190,14 @@ export const useContractStore = create<ContractState>((set, get) => ({
       return [];
     }
     try {
-      const fetchedTenantsAddress: string[] = await contract.getTenants();
+      const fetchedInfo = await contract.getTenants();
+      const fetchedTenantsAddress: string[] = await fetchedInfo[0];
+      const fetchedTenantsName: string[] = fetchedInfo[1];
 
       const tenants: Tenant[] = fetchedTenantsAddress.map(
         (address: string, index) => ({
           address: address,
-          name: "TestName_" + index,
+          name: fetchedTenantsName[index] + " (Tenant " + (index + 1) + ")"
         })
       );
 

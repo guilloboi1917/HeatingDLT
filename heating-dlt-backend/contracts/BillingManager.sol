@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
-import "./HEAT.sol";
+import "./TNCY.sol";
 import "./SharedStructs.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -12,9 +12,9 @@ contract BillingManager {
     IERC20 public heatToken;
 
     address public masterOwner;
-    uint256 public heatPerKwh = 1 * 10 ** 18; // 1 HEAT = 1 kWh (with decimals)
+    uint256 public heatPerKwh = 1 * 10 ** 18; // 1 TNCY = 1 kWh (with decimals)
 
-    // Tenant => Outstanding balance (in HEAT)
+    // Tenant => Outstanding balance (in TNCY)
     mapping(address => uint256) public outstandingBalance;
 
     // Bill ID => Bill
@@ -32,7 +32,7 @@ contract BillingManager {
         string billId
     );
 
-    event HEATBurned(uint256 amount);
+    event TNCYBurned(uint256 amount);
 
     constructor(address _master, IERC20 _heatToken) {
         masterOwner = _master;
@@ -55,7 +55,7 @@ contract BillingManager {
     function createBill(
         address _billee,
         address _biller,
-        uint256 _amountHEAT,
+        uint256 _amountTNCY,
         string memory _description,
         string memory _billId
     ) external billDoesNotExist(_billId) {
@@ -64,7 +64,7 @@ contract BillingManager {
             paid: false,
             billee: _billee,
             biller: _biller,
-            amountHEAT: _amountHEAT,
+            amountTNCY: _amountTNCY,
             dateIssuance: block.timestamp,
             datePaid: 0,
             description: _description
@@ -74,9 +74,9 @@ contract BillingManager {
         billsById[_billId] = newBill;
         tenantBillIds[_billee].push(_billId);
 
-        outstandingBalance[_billee] += _amountHEAT;
+        outstandingBalance[_billee] += _amountTNCY;
 
-        emit BillIssued(msg.sender, _billee, _amountHEAT, _billId);
+        emit BillIssued(msg.sender, _billee, _amountTNCY, _billId);
     }
 
     function payBill(string memory _billId, address _payer) external returns (bool) {
@@ -84,7 +84,7 @@ contract BillingManager {
         require(!bill.paid, "Bill already paid");
         require(_payer == bill.billee, "Not the billee");
 
-        uint256 amount = bill.amountHEAT;
+        uint256 amount = bill.amountTNCY;
 
         // For now we only burn the tokens when paying.
         // Could also do hybrid and burn half and transfer half

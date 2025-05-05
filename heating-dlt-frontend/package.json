@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3500",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -45,6 +45,7 @@
     "embla-carousel-react": "8.5.1",
     "ethers": "latest",
     "input-otp": "1.4.1",
+    "libphonenumber-js": "^1.12.7",
     "lucide-react": "^0.454.0",
     "my-v0-project": "file:",
     "next": "15.2.4",
