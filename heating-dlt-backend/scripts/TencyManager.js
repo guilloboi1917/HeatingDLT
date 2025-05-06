@@ -16,7 +16,6 @@ async function addAndRecord(contract, meter, data) {
     // Convert data to bytes and add to IPFS using CIDv1
     const bytes = uint8ArrayFromString(JSON.stringify(data));
     const cid = await fs.addBytes(bytes);
-    console.log(cid.toString());
     const cidString = cid.toString();
 
 
@@ -80,73 +79,43 @@ async function main() {
     await addAndRecord(manager, meter1, day2);
     await addAndRecord(manager, meter1, day3);
 
-    
+
     let readTx = await manager.connect(tenant1).getDailyUsage(meter1);
     console.log("Daily Usage: ", readTx);
 
+    // 1. Get the TNCY address from manager
+    const tncyAddress = await manager.connect(master).getTNCYAddress();
+    console.log("TNCY Contract Address:", tncyAddress);
+
+    // 2. Proper contract attachment
+    const TNCY = await ethers.getContractFactory("TNCY");
+    const tncyContract = TNCY.attach(tncyAddress);
+
     // Now let's mint some tokens and interact with the contract
-    tx = await manager.connect(master).mintTNCY(master, ethers.parseUnits("1000", 18));
-    console.log(tx);
+    tx = await tncyContract.connect(master).mint(master, ethers.parseUnits("1000", 18));
+    tx = await tncyContract.connect(master).mint(tenant1, ethers.parseUnits("200", 18));
 
     tx = await manager.connect(master).getTokenBalance();
     console.log(tx);
 
-    // Now let's say tenant pays a landlord money for pellets and also gets some TNCY minted
-    tx = await manager.connect(master).mintTNCY(tenant1, ethers.parseUnits("500", 18));
-
-    // they check their token balance
-    tx = await manager.connect(tenant1).getTokenBalance();
+    tx = await manager.connect(master).getUtilityExpenses();
     console.log(tx);
 
-    // Get the TNCY token address
-    const heatTokenAddress = await manager.connect(tenant1).getTNCYAddress();
-    console.log("TNCY Token Address:", heatTokenAddress);
+    tx = await manager.connect(tenant1).getTenantUtilityExpenses(tenant1);
+    console.log(tx);
 
-    // Create a contract instance for the TNCY token
-    const HeatToken = await ethers.getContractFactory("TNCY");
-    const heatToken = HeatToken.attach(heatTokenAddress);
+    // Now a landlord wasn't to create an expense
+    tx = await manager.connect(master).recordUtilityExpense(
+        ethers.parseEther("200", 18),
+        BigInt(Math.floor(new Date().getTime() / 1000)),
+        "Roof Repairs",
+        "Roof needed some repairs",
+        "",
+        [tenant1, tenant2]
+    )
 
-
-    // tx = await collection.connect(master).createBill(
-    //     tenant1,
-    //     ethers.parseUnits("10", 18),
-    //     "First bill",
-    //     "1234"
-    // )
-    // await tx.wait();
-
-    // tx = await collection.connect(master).createBill(
-    //     tenant1,
-    //     ethers.parseUnits("10", 18),
-    //     "Second bill",
-    //     "1235"
-    // )
-    // await tx.wait();
-
-    // tx = await collection.connect(master).createBill(
-    //     tenant1,
-    //     ethers.parseUnits("15", 18),
-    //     "Third bill",
-    //     "1236"
-    // )
-    // await tx.wait();
-
-    // // 1. Get BillingManager address from SmartMeterCollection
-    // const billingManagerAddress = await collection.billingManager();
-    // console.log("BillingManager Address:", billingManagerAddress);
-
-    // // 2. Approve BillingManager (not SmartMeterCollection) to spend TNCY
-    // const approveTx = await heatToken.connect(tenant1).approve(
-    //     billingManagerAddress, // Approve BillingManager, not SmartMeterCollection
-    //     ethers.parseUnits("1000", 18)
-    // );
-    // await approveTx.wait();
-    // console.log("Approved BillingManager to spend TNCY");
-
-    // // 3. Now pay the bill
-    // const payBillTx = await collection.connect(tenant1).payBillOnBehalf("1234", tenant1.address);
-    // await payBillTx.wait();
-    // console.log("Bill paid successfully");
+    tx = await manager.connect(tenant1).getTenantUtilityExpenses(tenant1);
+    console.log(tx);
 }
 
 

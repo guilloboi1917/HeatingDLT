@@ -6,7 +6,20 @@ struct SmartMeter {
     string ownerName;
     address smartMeterAddress;
     string smartMeterId;
+    address assignedTenant;
     bool isActive;
+}
+
+struct UtilityExpense {
+    address issuer;
+    uint256 amountTNCY;
+    uint256 dateIssuance;
+    bool validated; // The validator validates this expense
+    bytes messageHash; // The validator hashes the message
+    string utilityType; // For now let's say there is heating, repairs, etc.
+    string description;
+    string ipfsCID; // For any other infos
+    address[] tenants; // Which tenants does this concern
 }
 
 struct Tenant {

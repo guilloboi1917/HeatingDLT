@@ -3,30 +3,30 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 import "./TNCY.sol";
-import "./BillingManager.sol";
 import "./SharedStructs.sol";
+import "./UtilityValidator.sol";
 
 contract TencyManager {
+    // TOKEN
+    TNCY public tncyToken;
+
+    // CONTRACT OWNER --> LANDLORD or PROPERTY MANAGER
     address public masterOwner;
-    TNCY public heatToken;
-    BillingManager public billingManager;
+
+    UtilityValidator public utilityValidator;
 
     AddressInfo private masterContactInfo;
 
-    // Map meter address to SmartMeter struct
+    // SMART METERS
     mapping(address => SmartMeter) public smartMeters;
-
     address[] private smartMetersArray;
 
-    // Map tenant address to Tenant struct
+    // TENANT SPECIFIC
     mapping(address => Tenant) public tenants;
-
     address[] private tenantsArray;
-
     string[] private tenantNamesArray;
 
-    // Map meter address to Measurement data
-    // Later to be replaced with ipfs
+    // SMART METER READINGS
     mapping(address => DailyMeasurement[]) dailyEnergyUsage;
     mapping(address => string[]) detailedUsageIPFS;
 
@@ -36,7 +36,13 @@ contract TencyManager {
     // Whitelisted tenants that can access parts of this manager
     mapping(address => bool) public whitelistedTenants;
 
-    // EVENTS
+    // All expenses
+    UtilityExpense[] private utilityExpenses;
+
+    // Utility expenses for a tenant
+    mapping(address => UtilityExpense[]) private tenantUtitlityExpenses;
+
+    // ================= EVENTS =================
     event MeterRegistered(
         string name,
         string ownerName,
@@ -46,39 +52,78 @@ contract TencyManager {
 
     event DataRecorded(address indexed meter, uint256 timestamp, uint256 value);
 
-    // MODIFIERS
-    modifier onlyMaster() {
-        require(msg.sender == masterOwner, "Only master");
-        _;
-    }
+    // ================= CONSTRUCTOR =================
 
-    modifier onlyWhitelistedActiveMeter() {
-        require(
-            whitelistedMeters[msg.sender] && smartMeters[msg.sender].isActive,
-            "Not a whitelisted active meter"
-        );
-        _;
-    }
-
-    modifier onlyTenant() {
-        require(whitelistedTenants[msg.sender], "Not whitelisted tenant");
-        _;
-    }
-
-    // Constructor for Tency Manager
     constructor(address _master, AddressInfo memory _ownerContactInfo) {
         console.log("Creating manager for", _master);
         masterOwner = _master;
         masterContactInfo = _ownerContactInfo;
 
-        // Deploy a new HeatingToken contract w
-        // Owner of heattoken is this TencyManager
-        heatToken = new TNCY(address(this));
+        // Create TOKEN, BillingManager and UtilityValidator
+        tncyToken = new TNCY(address(this));
 
-        billingManager = new BillingManager(_master, heatToken);
+        // We pass on the ownership
+        tncyToken.setNewOwner(_master);
+        // We add the landlord as a billing manager, but also have this contract as a billingManager
+        tncyToken.addBillingAdmin(_master);
+
+        utilityValidator = new UtilityValidator(address(this));
     }
 
-    // FUNCTIONS
+    // ================= UTILTY EXPENSES =================
+    function recordUtilityExpense(
+        uint256 _amountTNCY,
+        uint256 _dateIssuance,
+        string calldata _utilityType,
+        string calldata _description,
+        string calldata _ipfsCID,
+        address[] calldata _tenants
+    ) external onlyMaster {
+        // Maybe some checks here
+
+        UtilityExpense memory unvalidatedUtilityExpense = UtilityExpense(
+            msg.sender,
+            _amountTNCY,
+            _dateIssuance,
+            false,
+            "",
+            _utilityType,
+            _description,
+            _ipfsCID,
+            _tenants
+        );
+
+        // Now we validate
+        UtilityExpense memory validatedUtilityExpense = utilityValidator
+            .validateExpense(unvalidatedUtilityExpense);
+
+        utilityExpenses.push(validatedUtilityExpense);
+
+        for (uint i = 0; i < _tenants.length; i++) {
+            tenantUtitlityExpenses[_tenants[i]].push(validatedUtilityExpense);
+        }
+
+        // No need for event here, as validator already creates one
+    }
+
+    // ADMIN ONLY
+    function getUtilityExpenses()
+        external
+        view
+        onlyMaster
+        returns (UtilityExpense[] memory)
+    {
+        return utilityExpenses;
+    }
+
+    // ================= TENANT UTILITY MANAGMENT =================
+    function getTenantUtilityExpenses(
+        address _tenant
+    ) external view onlyTenant returns (UtilityExpense[] memory) {
+        return tenantUtitlityExpenses[_tenant];
+    }
+
+    // ================= ADMIN MANAGEMENT =================
 
     function getRole() external view returns (string memory) {
         if (msg.sender == masterOwner) return "admin";
@@ -107,6 +152,7 @@ contract TencyManager {
             ownerName: _ownerName,
             smartMeterAddress: _smartMeterAddress,
             smartMeterId: _smartMeterId,
+            assignedTenant: address(0),
             isActive: true
         });
 
@@ -121,14 +167,17 @@ contract TencyManager {
         );
     }
 
-    // Also add remove smartmeter
-
     // Add and remove tenants
     function addTenant(
         address _tenant,
         string memory _fullName,
         address _smartMeterAddress
     ) external onlyMaster {
+        require(
+            smartMeters[_smartMeterAddress].assignedTenant == address(0),
+            "SmartMeter already assigned!"
+        );
+
         tenants[_tenant] = Tenant({
             fullName: _fullName,
             assignedSmartMeter: _smartMeterAddress
@@ -139,10 +188,16 @@ contract TencyManager {
         tenantNamesArray.push(_fullName);
 
         whitelistedTenants[_tenant] = true;
+
+        smartMeters[_smartMeterAddress].assignedTenant = _tenant;
     }
 
     function removeTenant(address _tenant) external onlyMaster {
         whitelistedTenants[_tenant] = false;
+
+        // Remove reference from smart meter
+        address assignedSmartMeter = tenants[_tenant].assignedSmartMeter;
+        smartMeters[assignedSmartMeter].assignedTenant = address(0);
 
         // Find and remove from array
         for (uint i = 0; i < tenantsArray.length; i++) {
@@ -188,6 +243,8 @@ contract TencyManager {
         return masterContactInfo;
     }
 
+    // ================= SMARTMETERS =================
+
     // returns array of addresses
     function getSmartMeters()
         external
@@ -218,19 +275,54 @@ contract TencyManager {
 
     // We store the usage here, and detailed summaries to ipfs
     function recordDailyUsage(
-        uint256 timestamp,
+        uint256 _timestamp,
         uint256 _usage,
         string calldata _unit,
         string calldata _ipfsCID // Store raw bytes
     ) external onlyWhitelistedActiveMeter {
         dailyEnergyUsage[msg.sender].push(
             DailyMeasurement({
-                timestamp: timestamp, // maybe other than block timestamp would be good for testing
+                timestamp: _timestamp, // maybe other than block timestamp would be good for testing
                 usage: _usage,
                 unit: _unit,
                 ipfsCID: _ipfsCID
             })
         );
+
+        // Costs in TNCY
+        uint256 _tokens = _usage * tncyToken.ratePerKwh();
+        string memory description = string.concat(
+            "HEATING Recorded by SMARTMETER ID: ",
+            smartMeters[msg.sender].smartMeterId
+        );
+
+        address assignedTenant = smartMeters[msg.sender].assignedTenant;
+        address[] memory _tenants = new address[](1);
+        _tenants[0] = assignedTenant;
+
+        // We also create utilityExpenses for this
+        UtilityExpense memory unvalidatedUtilityExpense = UtilityExpense(
+            msg.sender,
+            _tokens,
+            _timestamp,
+            false,
+            "",
+            "HEATING",
+            description,
+            _ipfsCID,
+            _tenants
+        );
+
+        // Now we validate
+        UtilityExpense memory validatedUtilityExpense = utilityValidator
+            .validateExpense(unvalidatedUtilityExpense);
+
+        utilityExpenses.push(validatedUtilityExpense);
+
+        tenantUtitlityExpenses[assignedTenant].push(validatedUtilityExpense);
+
+        // ALSO ADJUST BALANCE
+
         emit DataRecorded(msg.sender, block.timestamp, _usage);
     }
 
@@ -252,67 +344,12 @@ contract TencyManager {
         return dailyEnergyUsage[_meterAddress];
     }
 
-    // Master can withdraw collected payments
-    function withdrawCollectedFunds() external onlyMaster {
-        uint256 balance = heatToken.balanceOf(address(this));
-        require(balance > 0, "No funds to withdraw");
-        require(heatToken.transfer(masterOwner, balance), "Transfer failed");
-
-        // Not sure if complete
-    }
-
-    // WRAPPERS FOR BILLINGCONTRACT
-    function createBill(
-        address _billee,
-        uint256 _amountTNCY,
-        string memory _description,
-        string memory _billId
-    ) public onlyMaster {
-        require(whitelistedTenants[_billee], "Invalid tenant address");
-
-        // maybe let's create billId from hash
-        billingManager.createBill(
-            _billee,
-            msg.sender,
-            _amountTNCY,
-            _description,
-            _billId
-        );
-    }
-
-    function payBillOnBehalf(
-        string memory _billId,
-        address payer
-    ) external returns (bool) {
-        return billingManager.payBill(_billId, payer); // Forward msg.sender as payer
-    }
-
     function getTokenBalance() public view returns (uint256) {
         require(
             msg.sender == masterOwner || whitelistedTenants[msg.sender],
             "Not authorized"
         );
-        return heatToken.balanceOf(msg.sender);
-    }
-
-    function getBills(address _tenant) external view returns (Bill[] memory) {
-        require(
-            msg.sender == masterOwner ||
-                (msg.sender == _tenant && whitelistedTenants[_tenant]),
-            "Not authorized"
-        );
-
-        return billingManager.getBills(_tenant);
-    }
-
-    // Token specific
-
-    function getOutstandingBalance() external view returns (uint256) {
-        return billingManager.getOutstandingBalance(msg.sender);
-    }
-
-    function mintTNCY(address to, uint256 amount) external onlyMaster {
-        heatToken.mint(to, amount);
+        return tncyToken.balanceOf(msg.sender);
     }
 
     function getTNCYAddress() public view returns (address) {
@@ -320,6 +357,26 @@ contract TencyManager {
             msg.sender == masterOwner || whitelistedTenants[msg.sender],
             "Unauthorized"
         );
-        return address(heatToken);
+        return address(tncyToken);
+    }
+
+    // ================= MODIFIERS =================
+
+    modifier onlyMaster() {
+        require(msg.sender == masterOwner, "Only master");
+        _;
+    }
+
+    modifier onlyWhitelistedActiveMeter() {
+        require(
+            whitelistedMeters[msg.sender] && smartMeters[msg.sender].isActive,
+            "Not a whitelisted active meter"
+        );
+        _;
+    }
+
+    modifier onlyTenant() {
+        require(whitelistedTenants[msg.sender], "Not whitelisted tenant");
+        _;
     }
 }
