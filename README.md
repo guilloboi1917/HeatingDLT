@@ -17,7 +17,7 @@ heating-dlt-frontend is the current frontend, initially developed with v0 and up
 - Switch to created testing network
 - Start back end in terminal and run script
   - npx hardhat node
-  - npx hardhat run ./scripts/SmartMeterCollection.js --network localhost
+  - npx hardhat run ./scripts/TencyManager.js --network localhost
 - Start front end
   - npm install
   - npm run dev
@@ -56,3 +56,5 @@ heating-dlt-frontend is the current frontend, initially developed with v0 and up
         "Content-Type"
       ]
     }
+  
+  - Start the ipfs node (ipfs daemon)

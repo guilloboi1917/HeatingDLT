@@ -1,40 +1,36 @@
 import hardhat from "hardhat";
 const { ethers } = hardhat;
-import { create } from 'ipfs-http-client';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-const execAsync = promisify(exec);
-import { CID } from 'multiformats/cid';
-import { base58btc } from 'multiformats/bases/base58';
-import { read } from "fs";
+import { createHelia } from 'helia';
+import { unixfs } from '@helia/unixfs';
+import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string';
 
-// Set up IPFS HTTP client instance
-// Connecting to your local IPFS node
-const ipfs = create({
-    host: '127.0.0.1',  // Localhost
-    port: '5001',       // Default IPFS API port
-    protocol: 'http'    // Use http since it's your local node
-});
+
+const helia = await createHelia();
+const fs = unixfs(helia);
 
 async function addAndRecord(contract, meter, data) {
-    // Add with CIDv0
-    const { cid } = await ipfs.add(JSON.stringify(data), { cidVersion: 0 });
+    // Helia setup (ideally move this outside if reused)
+    const helia = await createHelia();
+    const fs = unixfs(helia);
+
+    // Convert data to bytes and add to IPFS using CIDv1
+    const bytes = uint8ArrayFromString(JSON.stringify(data));
+    const cid = await fs.addBytes(bytes);
+    console.log(cid.toString());
     const cidString = cid.toString();
 
-    // Convert to bytes
-    const cidBytes = CID.parse(cidString, base58btc).bytes;
 
-    // Call contract
+    // Send to smart contract
     await contract.connect(meter).recordDailyUsage(
-        BigInt(Math.floor(new Date(day1.measurements[0].timestamp).getTime() / 1000)),
+        BigInt(Math.floor(new Date(data.measurements[0].timestamp).getTime() / 1000)),
         BigInt(data.measurements.reduce((total, entry) => total + entry.value, 0) * 1e18),
         "kWh",
-        cidBytes
+        cidString
     );
 
-    console.log("Recorded Meter Data", cidBytes);
+    console.log("Recorded Meter Data", cidString);
 
-    await contract.connect(meter).storeDetailedUsage(cidBytes);
+    await contract.connect(meter).storeDetailedUsage(cidString);
     console.log("Added to detailed usage: ", cidString);
 
     return cidString;
@@ -45,8 +41,8 @@ async function main() {
     const [master, meter1, meter2, tenant1, tenant2] = await ethers.getSigners();
 
     // Deploy factory
-    const SmartMeterCollection = await ethers.getContractFactory("SmartMeterCollection");
-    const collection = await SmartMeterCollection.deploy(
+    const TencyManager = await ethers.getContractFactory("TencyManager");
+    const manager = await TencyManager.deploy(
         master.address,
         {
             ownerName: "Heating Company",
@@ -58,11 +54,11 @@ async function main() {
             phone: "+41795338161"
         }
     );
-    await collection.waitForDeployment();
-    console.log("SmartMeterCollection deployed to:", collection.target);
+    await manager.waitForDeployment();
+    console.log("TencyManager deployed to:", manager.target);
 
     // Create collection with initial meter
-    let tx = await collection.connect(master).registerSmartMeter(
+    let tx = await manager.connect(master).registerSmartMeter(
         "Main Building Meter",
         "Property Management Inc.",
         meter1.address,
@@ -72,7 +68,7 @@ async function main() {
     console.log("Registered Smart Meter 1");
 
     // Whitelist tenant1
-    tx = await collection.connect(master).addTenant(
+    tx = await manager.connect(master).addTenant(
         tenant1.address,
         "Peter Lustig",
         meter1.address
@@ -80,74 +76,35 @@ async function main() {
     await tx.wait();
     console.log("Added Tenant 1");
 
-    addAndRecord(collection, meter1, day1);
-    addAndRecord(collection, meter1, day2);
-    addAndRecord(collection, meter1, day3);
+    await addAndRecord(manager, meter1, day1);
+    await addAndRecord(manager, meter1, day2);
+    await addAndRecord(manager, meter1, day3);
 
-    const readTx = await collection.connect(tenant1).getDailyUsage(meter1);
-    await readTx.wait();
-    console.log(readTx);
-    // // Repeat for Day 2
-    // cid = await ipfs.add(JSON.stringify(day2),
-    //     { cidVersion: 0 }// Force legacy CID format
-    // );
-    // console.log("IPFS CID for Day 2:", cid.path);
-
-    // tx = await collection.connect(meter1).storeDetailedUsage(cid.path);
-    // await tx.wait();
-    // console.log("Added to detailed usage: ", cid.path);
-
-    // // Submit test data for Day 2
-    // tx = await collection.connect(meter1).recordDailyUsage(
-    //     BigInt(Math.floor(new Date(day2.measurements[0].timestamp).getTime() / 1000)),
-    //     sumDay2,
-    //     "kWh",
-    //     cid.path.toString()
-    // );
-    // await tx.wait();
-    // console.log("Recorded Meter 1 Data Day 2");
-
-    // // Repeat for Day 3
-    // cid = await ipfs.add(JSON.stringify(day3),
-    //     { cidVersion: 0 }// Force legacy CID format
-    // );
-    // console.log("IPFS CID for Day 3:", cid.path);
-
-    // tx = await collection.connect(meter1).storeDetailedUsage(cid.path);
-    // await tx.wait();
-    // console.log("Added to detailed usage: ", cid.path);
-
-    // // Submit test data for Day 3
-    // tx = await collection.connect(meter1).recordDailyUsage(
-    //     BigInt(Math.floor(new Date(day3.measurements[0].timestamp).getTime() / 1000)),
-    //     sumDay3,
-    //     "kWh",
-    //     cid.path.toString()
-    // );
-    // await tx.wait();
-    // console.log("Recorded Meter 1 Data Day 3");
+    
+    let readTx = await manager.connect(tenant1).getDailyUsage(meter1);
+    console.log("Daily Usage: ", readTx);
 
     // Now let's mint some tokens and interact with the contract
-    // tx = await collection.connect(master).mintTNCY(master, ethers.parseUnits("1000", 18));
-    // console.log(tx);
+    tx = await manager.connect(master).mintTNCY(master, ethers.parseUnits("1000", 18));
+    console.log(tx);
 
-    // tx = await collection.connect(master).getTokenBalance();
-    // console.log(tx);
+    tx = await manager.connect(master).getTokenBalance();
+    console.log(tx);
 
-    // // Now let's say tenant pays a landlord money for pellets and also gets some TNCY minted
-    // tx = await collection.connect(master).mintTNCY(tenant1, ethers.parseUnits("500", 18));
+    // Now let's say tenant pays a landlord money for pellets and also gets some TNCY minted
+    tx = await manager.connect(master).mintTNCY(tenant1, ethers.parseUnits("500", 18));
 
-    // // they check their token balance
-    // tx = await collection.connect(tenant1).getTokenBalance();
-    // console.log(tx);
+    // they check their token balance
+    tx = await manager.connect(tenant1).getTokenBalance();
+    console.log(tx);
 
-    // // Get the TNCY token address
-    // const heatTokenAddress = await collection.connect(tenant1).getTNCYAddress();
-    // console.log("TNCY Token Address:", heatTokenAddress);
+    // Get the TNCY token address
+    const heatTokenAddress = await manager.connect(tenant1).getTNCYAddress();
+    console.log("TNCY Token Address:", heatTokenAddress);
 
-    // // Create a contract instance for the TNCY token
-    // const HeatToken = await ethers.getContractFactory("TNCY");
-    // const heatToken = HeatToken.attach(heatTokenAddress);
+    // Create a contract instance for the TNCY token
+    const HeatToken = await ethers.getContractFactory("TNCY");
+    const heatToken = HeatToken.attach(heatTokenAddress);
 
 
     // tx = await collection.connect(master).createBill(

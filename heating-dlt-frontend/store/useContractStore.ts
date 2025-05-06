@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { ethers } from "ethers";
 import { toast } from "@/components/ui/use-toast";
-import SmartMeterCollectionAbi from "@/contracts/SmartMeterCollection.json";
+import TencyManagerAbi from "@/contracts/TencyManager.json";
 import TNCYAbi from "@/contracts/TNCY.json";
 import BillingManagerAbi from "@/contracts/BillingManager.json";
 import { mock } from "node:test";
@@ -113,7 +113,7 @@ export const useContractStore = create<ContractState>((set, get) => ({
       const account = accounts[0];
       const contract = new ethers.Contract(
         CONTRACT_ADDRESS,
-        SmartMeterCollectionAbi.abi,
+        TencyManagerAbi.abi,
         signer
       );
 

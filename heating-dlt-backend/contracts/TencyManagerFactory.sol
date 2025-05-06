@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./SmartMeterCollection.sol";
+import "./TencyManager.sol";
 import "hardhat/console.sol";
 
-contract SmartMeterCollectionFactory {
+contract TencyManagerFactory {
     address public masterParticipant;
     mapping(address => bool) public isMasterParticipant;
     mapping(address => address[]) public masterContracts;
@@ -29,14 +29,14 @@ contract SmartMeterCollectionFactory {
         isMasterParticipant[_master] = true;
     }
 
-    function createCollectionContract(
+    function createManagerContract(
         string memory _name,
         string memory _ownerName,
         address _smartMeterAddress,
         string memory _smartMeterId,
         AddressInfo memory _ownerContactInfo
     ) external onlyMaster returns (address, AddressInfo memory) {
-        SmartMeterCollection newContract = new SmartMeterCollection(msg.sender, _ownerContactInfo);
+        TencyManager newContract = new TencyManager(msg.sender, _ownerContactInfo);
 
         // Register the initial smart meter during creation
         newContract.registerSmartMeter(

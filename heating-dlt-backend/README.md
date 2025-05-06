@@ -13,7 +13,7 @@ which will create 20 test accounts.
 To kickstart and deploy one master owner (landlord), 2 tenants with one smart meter connected to each, run the hardhat script
 
 ```shell
-npx hardhat run ./scripts/SmartMeterCollection.js --network localhost
+npx hardhat run ./scripts/TencyManager.js --network localhost
 ```
 
 **DEPRECATED**

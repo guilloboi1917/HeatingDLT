@@ -6,7 +6,7 @@ import "./TNCY.sol";
 import "./BillingManager.sol";
 import "./SharedStructs.sol";
 
-contract SmartMeterCollection {
+contract TencyManager {
     address public masterOwner;
     TNCY public heatToken;
     BillingManager public billingManager;
@@ -33,7 +33,7 @@ contract SmartMeterCollection {
     // Whitelist meters
     mapping(address => bool) private whitelistedMeters;
 
-    // Whitelisted tenants that can access parts of this collection
+    // Whitelisted tenants that can access parts of this manager
     mapping(address => bool) public whitelistedTenants;
 
     // EVENTS
@@ -65,14 +65,14 @@ contract SmartMeterCollection {
         _;
     }
 
-    // Constructor for Smart Meter Collection
+    // Constructor for Tency Manager
     constructor(address _master, AddressInfo memory _ownerContactInfo) {
-        console.log("Creating collection for", _master);
+        console.log("Creating manager for", _master);
         masterOwner = _master;
         masterContactInfo = _ownerContactInfo;
 
         // Deploy a new HeatingToken contract w
-        // Owner of heattoken is this smartmetercollection
+        // Owner of heattoken is this TencyManager
         heatToken = new TNCY(address(this));
 
         billingManager = new BillingManager(_master, heatToken);
