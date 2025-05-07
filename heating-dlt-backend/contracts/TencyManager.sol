@@ -99,8 +99,17 @@ contract TencyManager {
 
         utilityExpenses.push(validatedUtilityExpense);
 
-        for (uint i = 0; i < _tenants.length; i++) {
+        uint numberOfTenants = _tenants.length;
+        uint256 amountsEach = _amountTNCY / numberOfTenants;
+
+        for (uint i = 0; i < numberOfTenants; i++) {
             tenantUtitlityExpenses[_tenants[i]].push(validatedUtilityExpense);
+
+            // Adjust balance, only placeholder
+            tncyToken.adjustTenantBalance(
+                _tenants[i],
+                amountsEach
+            );
         }
 
         // No need for event here, as validator already creates one
@@ -321,7 +330,7 @@ contract TencyManager {
 
         tenantUtitlityExpenses[assignedTenant].push(validatedUtilityExpense);
 
-        // ALSO ADJUST BALANCE
+        tncyToken.adjustTenantBalance(assignedTenant, _tokens);
 
         emit DataRecorded(msg.sender, block.timestamp, _usage);
     }

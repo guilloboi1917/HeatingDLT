@@ -1,11 +1,11 @@
-"use client"
+// components/energy-usage.tsx
+'use client';
 
 import { useState, useEffect } from "react"
 import { useContractStore } from "@/store/useContractStore"
 import { useToast } from "@/components/ui/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { formatDate } from "@/lib/utils"
 import { ChartData, DailyMeasurementData, HourlyData } from "@/types/types"
 import {
   BarChart,

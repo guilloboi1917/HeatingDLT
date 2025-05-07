@@ -3,19 +3,16 @@ import { ethers } from "ethers";
 import { toast } from "@/components/ui/use-toast";
 import TencyManagerAbi from "@/contracts/TencyManager.json";
 import TNCYAbi from "@/contracts/TNCY.json";
+import BillingManagerAbi from "@/contracts/BillingManager.json";
 import {
   Tenant,
   SmartMeter,
   Bill,
   AddressInfo,
   DailyMeasurementData,
-  UtilityExpense,
 } from "@/types/types";
-import {
-  parseBill,
-  parseDailyMeasurements,
-  parseUtilityExpense,
-} from "@/lib/parseTypes";
+import { parseBill, parseDailyMeasurements } from "@/lib/parseTypes";
+
 
 const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
@@ -25,6 +22,7 @@ type ContractState = {
   account: string | null;
   contract: ethers.Contract | null;
   tokenContract: ethers.Contract | null;
+  billingManagerContract: ethers.Contract | null;
   isConnected: boolean;
   isAdmin: boolean;
   isTenant: boolean;
@@ -41,6 +39,10 @@ type ContractState = {
   addTenant: (address: string, name: string) => Promise<boolean>;
   removeTenant: (address: string) => Promise<boolean>;
 
+  // billing
+  getBills: (address: string) => Promise<Bill[]>;
+  payBill: (billId: string, amount: Number) => Promise<boolean>;
+
   // smart meter management
   getSmartMeters: () => Promise<SmartMeter[]>;
   registerSmartMeter: (
@@ -52,11 +54,6 @@ type ContractState = {
   //   getSmartMeterInfo: (address: string) => Promise<SmartMeter>;
 
   getEnergyUsage: (address: string) => Promise<DailyMeasurementData[]>;
-
-  // Utility Expenses
-  getUtilityExpenses: () => Promise<UtilityExpense[]>;
-  getTenantUtilityExpenses: (address: string) => Promise<UtilityExpense[]>;
-  recordUtilityExpense: () => Promise<void>;
 };
 
 export const useContractStore = create<ContractState>((set, get) => ({
@@ -65,6 +62,7 @@ export const useContractStore = create<ContractState>((set, get) => ({
   account: null,
   contract: null,
   tokenContract: null,
+  billingManagerContract: null,
   isConnected: false,
   isAdmin: false,
   isTenant: false,
@@ -119,12 +117,21 @@ export const useContractStore = create<ContractState>((set, get) => ({
         signer
       );
 
+      const BILLINGMANAGERCONTRACT_ADDRESS = await contract.billingManager();
+
+      const billingManagerContract = new ethers.Contract(
+        BILLINGMANAGERCONTRACT_ADDRESS,
+        BillingManagerAbi.abi,
+        signer
+      );
+
       set({
         provider: web3Provider,
         signer,
         account,
         contract,
         tokenContract,
+        billingManagerContract,
         isConnected: true,
         isAdmin,
         isTenant,
@@ -152,6 +159,7 @@ export const useContractStore = create<ContractState>((set, get) => ({
       account: null,
       contract: null,
       tokenContract: null,
+      billingManagerContract: null,
       isConnected: false,
       isAdmin: false,
       isTenant: false,
@@ -236,6 +244,86 @@ export const useContractStore = create<ContractState>((set, get) => ({
       return true;
     } catch (error) {
       console.error("Error removing tenant:", error);
+      return false;
+    }
+  },
+
+  getBills: async (address: string): Promise<Bill[]> => {
+    const { contract } = get();
+    if (!contract) {
+      toast({
+        title: "Not connected",
+        description: "Connect wallet first.",
+        variant: "destructive",
+      });
+      // return empty array
+      return [] as Bill[];
+    }
+
+    try {
+      console.log("getting bills");
+      const rawBills = await contract.getBills(address);
+      console.log(rawBills);
+
+      const bills = rawBills.map(parseBill);
+
+      return bills;
+    } catch (err) {
+      console.error("Error fetching bills for ", address, " -- ", err);
+    }
+    return [] as Bill[];
+  },
+
+  payBill: async (billId: string, amount: Number): Promise<boolean> => {
+    const { contract, tokenContract, billingManagerContract, account } = get();
+    if (!contract || !tokenContract || !billingManagerContract) {
+      toast({
+        title: "Not connected",
+        description: "Connect wallet first.",
+        variant: "destructive",
+      });
+      // return empty array
+      return false;
+    }
+
+    console.log(contract, tokenContract, billingManagerContract);
+
+    // Convert amount to correct units (e.g., wei)
+    try {
+      // First approve tokens
+      // This is not tidy
+      try {
+        const approveTx = await tokenContract.approve(
+          billingManagerContract.target,
+          amount,
+          { gasLimit: 1000000 }
+        );
+        await approveTx.wait(); // wait for mining
+      } catch (err) {
+        console.error("Couldn't do allowance: ", err);
+      }
+
+      try {
+        const payTx = await contract.payBillOnBehalf(billId, account);
+        await payTx.wait(); // wait for mining
+      } catch (err) {
+        console.error("Couldn't pay on behalf: ", err);
+      }
+      toast({
+        title: "Payment succesful!",
+        description: "",
+      });
+
+      try {
+        const newBalance = await contract.getTokenBalance();
+        set({ tokenBalance: newBalance });
+      } catch (err) {
+        console.error("Couldn't fetch new token balance");
+      }
+
+      return true;
+    } catch (err) {
+      console.error("PAYMENT FAILED! \n", err);
       return false;
     }
   },
@@ -329,62 +417,6 @@ export const useContractStore = create<ContractState>((set, get) => ({
       console.error("Error fetching Daily Measurements:", error);
       return [] as DailyMeasurementData[];
     }
-  },
-
-  getUtilityExpenses: async (): Promise<UtilityExpense[]> => {
-    const { contract } = get();
-    if (!contract) {
-      toast({
-        title: "Not connected",
-        description: "Connect wallet first.",
-        variant: "destructive",
-      });
-      // return empty array
-      return [] as UtilityExpense[];
-    }
-
-    try {
-      const rawUtiltyExpenses = await contract.getUtilityExpenses();
-
-      console.log("Fetched utilityExpenses: ", rawUtiltyExpenses);
-
-      return rawUtiltyExpenses.map(parseUtilityExpense);
-    } catch (err) {
-      console.error("Error fetching Utility Expenses:", err);
-      return [] as UtilityExpense[];
-    }
-  },
-
-  getTenantUtilityExpenses: async (
-    address: string
-  ): Promise<UtilityExpense[]> => {
-    const { contract, account } = get();
-    if (!contract || !account) {
-      toast({
-        title: "Not connected",
-        description: "Connect wallet first.",
-        variant: "destructive",
-      });
-      // return empty array
-      return [] as UtilityExpense[];
-    }
-
-    try {
-      const rawUtiltyExpenses = await contract.getTenantUtilityExpenses(
-        account
-      );
-
-      console.log("Fetched utilityExpenses: ", rawUtiltyExpenses);
-
-      return rawUtiltyExpenses.map(parseUtilityExpense);
-    } catch (err) {
-      console.error("Error fetching Utility Expenses:", err);
-      return [] as UtilityExpense[];
-    }
-  },
-
-  recordUtilityExpense: async (): Promise<void> => {
-    return;
   },
 
   //   addSmartMeter: async (meterId: string, location: string) => {

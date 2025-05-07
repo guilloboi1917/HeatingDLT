@@ -5,10 +5,10 @@ export interface Tenant {
 }
 
 export interface DailyMeasurementData {
-  timestamp: Date,
-  usage: number,
-  unit: string,
-  ipfsCID: string
+  timestamp: Date;
+  usage: number;
+  unit: string;
+  ipfsCID: string;
 }
 
 export interface HourlyData {
@@ -18,10 +18,10 @@ export interface HourlyData {
 }
 
 export interface ChartData {
-  ipfsCID: string,
-  date: number,
-  usage: number,
-  formattedDate: string
+  ipfsCID: string;
+  date: number;
+  usage: number;
+  formattedDate: string;
 }
 
 export interface SmartMeter {
@@ -51,4 +51,16 @@ export interface AddressInfo {
   country: string;
   email: string;
   phone: string;
+}
+
+export interface UtilityExpense {
+  issuer: string;
+  amountTNCY: bigint;
+  dateIssuance: Date;
+  validated: boolean;
+  messageHash: string; // hex string
+  utilityType: string;
+  description: string;
+  ipfsCID: string;
+  tenants: string[]; // Always an array
 }

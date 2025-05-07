@@ -19,10 +19,16 @@ async function addAndRecord(contract, meter, data) {
     const cidString = cid.toString();
 
 
+    const totalKWh = data.measurements.reduce((total, entry) => total + entry.value, 0);
+    // Convert to TNCY (1:1 ratio) with proper BigInt handling
+    const totalKWhUsage = ethers.parseEther(totalKWh.toString(), 18); // Convert to token units (18 decimals)
+    // Get timestamp (first measurement)
+    const timestamp = BigInt(Math.floor(new Date(data.measurements[0].timestamp).getTime() / 1000));
+
     // Send to smart contract
     await contract.connect(meter).recordDailyUsage(
-        BigInt(Math.floor(new Date(data.measurements[0].timestamp).getTime() / 1000)),
-        BigInt(data.measurements.reduce((total, entry) => total + entry.value, 0) * 1e18),
+        timestamp,
+        totalKWhUsage,
         "kWh",
         cidString
     );
@@ -56,12 +62,29 @@ async function main() {
     await manager.waitForDeployment();
     console.log("TencyManager deployed to:", manager.target);
 
+    // 1. Get the TNCY address from manager
+    const tncyAddress = await manager.connect(master).getTNCYAddress();
+    console.log("TNCY Contract Address:", tncyAddress);
+
+    // 2. Proper contract attachment
+    const TNCY = await ethers.getContractFactory("TNCY");
+    const tncyContract = TNCY.attach(tncyAddress);
+
     // Create collection with initial meter
     let tx = await manager.connect(master).registerSmartMeter(
-        "Main Building Meter",
+        "Main Building 1 Meter",
         "Property Management Inc.",
         meter1.address,
         "SM-1001"
+    );
+    await tx.wait();
+    console.log("Registered Smart Meter 1");
+
+    tx = await manager.connect(master).registerSmartMeter(
+        "Main Building 2 Meter",
+        "Property Management Inc.",
+        meter2.address,
+        "SM-1002"
     );
     await tx.wait();
     console.log("Registered Smart Meter 1");
@@ -75,28 +98,40 @@ async function main() {
     await tx.wait();
     console.log("Added Tenant 1");
 
+    // Whitelist tenant1
+    tx = await manager.connect(master).addTenant(
+        tenant2.address,
+        "Stefan Sauber",
+        meter2.address
+    );
+    await tx.wait();
+    console.log("Added Tenant 2");
+
+    // Now let's mint some tokens and interact with the contract
+    tx = await tncyContract.connect(master).mint(master, ethers.parseUnits("1000", 18));
+    tx = await tncyContract.connect(master).mint(tenant1, ethers.parseUnits("500", 18));
+    tx = await tncyContract.connect(master).mint(tenant2, ethers.parseUnits("500", 18));
+
+    tx = await manager.connect(master).getTokenBalance();
+    console.log("Master token balance: ", tx);
+
+    tx = await manager.connect(tenant1).getTokenBalance();
+    console.log("Tenant 1 token balance: ", tx);
+
+    tx = await manager.connect(tenant2).getTokenBalance();
+    console.log("Tenant 2 token balance: ", tx);
+
     await addAndRecord(manager, meter1, day1);
     await addAndRecord(manager, meter1, day2);
     await addAndRecord(manager, meter1, day3);
 
+    await addAndRecord(manager, meter2, day1);
+    await addAndRecord(manager, meter2, day2);
+    await addAndRecord(manager, meter2, day3);
+
 
     let readTx = await manager.connect(tenant1).getDailyUsage(meter1);
     console.log("Daily Usage: ", readTx);
-
-    // 1. Get the TNCY address from manager
-    const tncyAddress = await manager.connect(master).getTNCYAddress();
-    console.log("TNCY Contract Address:", tncyAddress);
-
-    // 2. Proper contract attachment
-    const TNCY = await ethers.getContractFactory("TNCY");
-    const tncyContract = TNCY.attach(tncyAddress);
-
-    // Now let's mint some tokens and interact with the contract
-    tx = await tncyContract.connect(master).mint(master, ethers.parseUnits("1000", 18));
-    tx = await tncyContract.connect(master).mint(tenant1, ethers.parseUnits("200", 18));
-
-    tx = await manager.connect(master).getTokenBalance();
-    console.log(tx);
 
     tx = await manager.connect(master).getUtilityExpenses();
     console.log(tx);
@@ -104,12 +139,16 @@ async function main() {
     tx = await manager.connect(tenant1).getTenantUtilityExpenses(tenant1);
     console.log(tx);
 
-    // Now a landlord wasn't to create an expense
+
+    const amount = ethers.parseEther("150", 18);
+    console.log(amount);
+
+    // Now a landlord wants to create an expense
     tx = await manager.connect(master).recordUtilityExpense(
-        ethers.parseEther("200", 18),
+        amount,
         BigInt(Math.floor(new Date().getTime() / 1000)),
-        "Roof Repairs",
-        "Roof needed some repairs",
+        "REPAIRS",
+        "Roof needed some urgent repairs",
         "",
         [tenant1, tenant2]
     )
@@ -117,12 +156,6 @@ async function main() {
     tx = await manager.connect(tenant1).getTenantUtilityExpenses(tenant1);
     console.log(tx);
 }
-
-
-
-
-
-
 
 main()
     .then(() => process.exit(0))
@@ -132,97 +165,98 @@ main()
     });
 
 const day1 = {
-    "meterID": "MTR-123456",
-    "dataBlockID": "BLK-2023-11-15",
+    "meterID": "MTR-123456789",
+    "dataBlockID": "BLK-2025-05-01",
     "measurements": [
-        { "timestamp": "2023-11-15T00:00:00Z", "value": 8.2, "unit": "kWh" },
-        { "timestamp": "2023-11-15T01:00:00Z", "value": 7.9, "unit": "kWh" },
-        { "timestamp": "2023-11-15T02:00:00Z", "value": 7.5, "unit": "kWh" },
-        { "timestamp": "2023-11-15T03:00:00Z", "value": 7.3, "unit": "kWh" },
-        { "timestamp": "2023-11-15T04:00:00Z", "value": 7.8, "unit": "kWh" },
-        { "timestamp": "2023-11-15T05:00:00Z", "value": 8.5, "unit": "kWh" },
-        { "timestamp": "2023-11-15T06:00:00Z", "value": 10.1, "unit": "kWh" },
-        { "timestamp": "2023-11-15T07:00:00Z", "value": 12.3, "unit": "kWh" },
-        { "timestamp": "2023-11-15T08:00:00Z", "value": 14.0, "unit": "kWh" },
-        { "timestamp": "2023-11-15T09:00:00Z", "value": 15.2, "unit": "kWh" },
-        { "timestamp": "2023-11-15T10:00:00Z", "value": 15.8, "unit": "kWh" },
-        { "timestamp": "2023-11-15T11:00:00Z", "value": 16.0, "unit": "kWh" },
-        { "timestamp": "2023-11-15T12:00:00Z", "value": 15.5, "unit": "kWh" },
-        { "timestamp": "2023-11-15T13:00:00Z", "value": 14.9, "unit": "kWh" },
-        { "timestamp": "2023-11-15T14:00:00Z", "value": 14.3, "unit": "kWh" },
-        { "timestamp": "2023-11-15T15:00:00Z", "value": 13.8, "unit": "kWh" },
-        { "timestamp": "2023-11-15T16:00:00Z", "value": 13.5, "unit": "kWh" },
-        { "timestamp": "2023-11-15T17:00:00Z", "value": 14.2, "unit": "kWh" },
-        { "timestamp": "2023-11-15T18:00:00Z", "value": 15.0, "unit": "kWh" },
-        { "timestamp": "2023-11-15T19:00:00Z", "value": 16.5, "unit": "kWh" },
-        { "timestamp": "2023-11-15T20:00:00Z", "value": 17.0, "unit": "kWh" },
-        { "timestamp": "2023-11-15T21:00:00Z", "value": 16.2, "unit": "kWh" },
-        { "timestamp": "2023-11-15T22:00:00Z", "value": 14.8, "unit": "kWh" },
-        { "timestamp": "2023-11-15T23:00:00Z", "value": 11.5, "unit": "kWh" }
+        { "timestamp": "2025-05-01T00:00:00Z", "value": 1.2, "unit": "kWh" },
+        { "timestamp": "2025-05-01T01:00:00Z", "value": 1.1, "unit": "kWh" },
+        { "timestamp": "2025-05-01T02:00:00Z", "value": 1.0, "unit": "kWh" },
+        { "timestamp": "2025-05-01T03:00:00Z", "value": 0.9, "unit": "kWh" },
+        { "timestamp": "2025-05-01T04:00:00Z", "value": 1.0, "unit": "kWh" },
+        { "timestamp": "2025-05-01T05:00:00Z", "value": 1.3, "unit": "kWh" },
+        { "timestamp": "2025-05-01T06:00:00Z", "value": 1.8, "unit": "kWh" },
+        { "timestamp": "2025-05-01T07:00:00Z", "value": 2.5, "unit": "kWh" },
+        { "timestamp": "2025-05-01T08:00:00Z", "value": 3.0, "unit": "kWh" },
+        { "timestamp": "2025-05-01T09:00:00Z", "value": 3.4, "unit": "kWh" },
+        { "timestamp": "2025-05-01T10:00:00Z", "value": 3.5, "unit": "kWh" },
+        { "timestamp": "2025-05-01T11:00:00Z", "value": 3.6, "unit": "kWh" },
+        { "timestamp": "2025-05-01T12:00:00Z", "value": 3.2, "unit": "kWh" },
+        { "timestamp": "2025-05-01T13:00:00Z", "value": 3.0, "unit": "kWh" },
+        { "timestamp": "2025-05-01T14:00:00Z", "value": 2.8, "unit": "kWh" },
+        { "timestamp": "2025-05-01T15:00:00Z", "value": 2.6, "unit": "kWh" },
+        { "timestamp": "2025-05-01T16:00:00Z", "value": 2.5, "unit": "kWh" },
+        { "timestamp": "2025-05-01T17:00:00Z", "value": 2.7, "unit": "kWh" },
+        { "timestamp": "2025-05-01T18:00:00Z", "value": 2.9, "unit": "kWh" },
+        { "timestamp": "2025-05-01T19:00:00Z", "value": 3.1, "unit": "kWh" },
+        { "timestamp": "2025-05-01T20:00:00Z", "value": 3.3, "unit": "kWh" },
+        { "timestamp": "2025-05-01T21:00:00Z", "value": 3.0, "unit": "kWh" },
+        { "timestamp": "2025-05-01T22:00:00Z", "value": 2.6, "unit": "kWh" },
+        { "timestamp": "2025-05-01T23:00:00Z", "value": 1.8, "unit": "kWh" }
     ]
-}
+};
 
 const day2 = {
-    "meterID": "MTR-123456",
-    "dataBlockID": "BLK-2023-11-16",
+    "meterID": "MTR-123456789",
+    "dataBlockID": "BLK-2025-05-02",
     "measurements": [
-        { "timestamp": "2023-11-16T00:00:00Z", "value": 8.0, "unit": "kWh" },
-        { "timestamp": "2023-11-16T01:00:00Z", "value": 7.7, "unit": "kWh" },
-        { "timestamp": "2023-11-16T02:00:00Z", "value": 7.4, "unit": "kWh" },
-        { "timestamp": "2023-11-16T03:00:00Z", "value": 7.2, "unit": "kWh" },
-        { "timestamp": "2023-11-16T04:00:00Z", "value": 7.6, "unit": "kWh" },
-        { "timestamp": "2023-11-16T05:00:00Z", "value": 8.3, "unit": "kWh" },
-        { "timestamp": "2023-11-16T06:00:00Z", "value": 10.0, "unit": "kWh" },
-        { "timestamp": "2023-11-16T07:00:00Z", "value": 12.1, "unit": "kWh" },
-        { "timestamp": "2023-11-16T08:00:00Z", "value": 13.8, "unit": "kWh" },
-        { "timestamp": "2023-11-16T09:00:00Z", "value": 15.0, "unit": "kWh" },
-        { "timestamp": "2023-11-16T10:00:00Z", "value": 15.6, "unit": "kWh" },
-        { "timestamp": "2023-11-16T11:00:00Z", "value": 15.9, "unit": "kWh" },
-        { "timestamp": "2023-11-16T12:00:00Z", "value": 15.4, "unit": "kWh" },
-        { "timestamp": "2023-11-16T13:00:00Z", "value": 14.8, "unit": "kWh" },
-        { "timestamp": "2023-11-16T14:00:00Z", "value": 14.2, "unit": "kWh" },
-        { "timestamp": "2023-11-16T15:00:00Z", "value": 13.7, "unit": "kWh" },
-        { "timestamp": "2023-11-16T16:00:00Z", "value": 13.4, "unit": "kWh" },
-        { "timestamp": "2023-11-16T17:00:00Z", "value": 14.0, "unit": "kWh" },
-        { "timestamp": "2023-11-16T18:00:00Z", "value": 14.8, "unit": "kWh" },
-        { "timestamp": "2023-11-16T19:00:00Z", "value": 16.3, "unit": "kWh" },
-        { "timestamp": "2023-11-16T20:00:00Z", "value": 16.8, "unit": "kWh" },
-        { "timestamp": "2023-11-16T21:00:00Z", "value": 16.0, "unit": "kWh" },
-        { "timestamp": "2023-11-16T22:00:00Z", "value": 14.6, "unit": "kWh" },
-        { "timestamp": "2023-11-16T23:00:00Z", "value": 11.3, "unit": "kWh" }
+        { "timestamp": "2025-05-02T00:00:00Z", "value": 1.1, "unit": "kWh" },
+        { "timestamp": "2025-05-02T01:00:00Z", "value": 1.0, "unit": "kWh" },
+        { "timestamp": "2025-05-02T02:00:00Z", "value": 0.9, "unit": "kWh" },
+        { "timestamp": "2025-05-02T03:00:00Z", "value": 0.8, "unit": "kWh" },
+        { "timestamp": "2025-05-02T04:00:00Z", "value": 1.0, "unit": "kWh" },
+        { "timestamp": "2025-05-02T05:00:00Z", "value": 1.2, "unit": "kWh" },
+        { "timestamp": "2025-05-02T06:00:00Z", "value": 1.7, "unit": "kWh" },
+        { "timestamp": "2025-05-02T07:00:00Z", "value": 2.3, "unit": "kWh" },
+        { "timestamp": "2025-05-02T08:00:00Z", "value": 2.8, "unit": "kWh" },
+        { "timestamp": "2025-05-02T09:00:00Z", "value": 3.2, "unit": "kWh" },
+        { "timestamp": "2025-05-02T10:00:00Z", "value": 3.4, "unit": "kWh" },
+        { "timestamp": "2025-05-02T11:00:00Z", "value": 3.5, "unit": "kWh" },
+        { "timestamp": "2025-05-02T12:00:00Z", "value": 3.1, "unit": "kWh" },
+        { "timestamp": "2025-05-02T13:00:00Z", "value": 2.9, "unit": "kWh" },
+        { "timestamp": "2025-05-02T14:00:00Z", "value": 2.7, "unit": "kWh" },
+        { "timestamp": "2025-05-02T15:00:00Z", "value": 2.5, "unit": "kWh" },
+        { "timestamp": "2025-05-02T16:00:00Z", "value": 2.4, "unit": "kWh" },
+        { "timestamp": "2025-05-02T17:00:00Z", "value": 2.6, "unit": "kWh" },
+        { "timestamp": "2025-05-02T18:00:00Z", "value": 2.8, "unit": "kWh" },
+        { "timestamp": "2025-05-02T19:00:00Z", "value": 3.0, "unit": "kWh" },
+        { "timestamp": "2025-05-02T20:00:00Z", "value": 3.2, "unit": "kWh" },
+        { "timestamp": "2025-05-02T21:00:00Z", "value": 2.9, "unit": "kWh" },
+        { "timestamp": "2025-05-02T22:00:00Z", "value": 2.5, "unit": "kWh" },
+        { "timestamp": "2025-05-02T23:00:00Z", "value": 1.7, "unit": "kWh" }
     ]
-}
+};
 
 const day3 = {
-    "meterID": "MTR-123456",
-    "dataBlockID": "BLK-2023-11-17",
+    "meterID": "MTR-123456789",
+    "dataBlockID": "BLK-2025-05-03",
     "measurements": [
-        { "timestamp": "2023-11-17T00:00:00Z", "value": 8.1, "unit": "kWh" },
-        { "timestamp": "2023-11-17T01:00:00Z", "value": 7.8, "unit": "kWh" },
-        { "timestamp": "2023-11-17T02:00:00Z", "value": 7.6, "unit": "kWh" },
-        { "timestamp": "2023-11-17T03:00:00Z", "value": 7.4, "unit": "kWh" },
-        { "timestamp": "2023-11-17T04:00:00Z", "value": 7.9, "unit": "kWh" },
-        { "timestamp": "2023-11-17T05:00:00Z", "value": 8.6, "unit": "kWh" },
-        { "timestamp": "2023-11-17T06:00:00Z", "value": 10.2, "unit": "kWh" },
-        { "timestamp": "2023-11-17T07:00:00Z", "value": 12.4, "unit": "kWh" },
-        { "timestamp": "2023-11-17T08:00:00Z", "value": 14.1, "unit": "kWh" },
-        { "timestamp": "2023-11-17T09:00:00Z", "value": 15.3, "unit": "kWh" },
-        { "timestamp": "2023-11-17T10:00:00Z", "value": 15.9, "unit": "kWh" },
-        { "timestamp": "2023-11-17T11:00:00Z", "value": 16.1, "unit": "kWh" },
-        { "timestamp": "2023-11-17T12:00:00Z", "value": 15.6, "unit": "kWh" },
-        { "timestamp": "2023-11-17T13:00:00Z", "value": 15.0, "unit": "kWh" },
-        { "timestamp": "2023-11-17T14:00:00Z", "value": 14.4, "unit": "kWh" },
-        { "timestamp": "2023-11-17T15:00:00Z", "value": 13.9, "unit": "kWh" },
-        { "timestamp": "2023-11-17T16:00:00Z", "value": 13.6, "unit": "kWh" },
-        { "timestamp": "2023-11-17T17:00:00Z", "value": 14.3, "unit": "kWh" },
-        { "timestamp": "2023-11-17T18:00:00Z", "value": 15.1, "unit": "kWh" },
-        { "timestamp": "2023-11-17T19:00:00Z", "value": 16.6, "unit": "kWh" },
-        { "timestamp": "2023-11-17T20:00:00Z", "value": 17.1, "unit": "kWh" },
-        { "timestamp": "2023-11-17T21:00:00Z", "value": 16.3, "unit": "kWh" },
-        { "timestamp": "2023-11-17T22:00:00Z", "value": 14.9, "unit": "kWh" },
-        { "timestamp": "2023-11-17T23:00:00Z", "value": 11.6, "unit": "kWh" }
+        { "timestamp": "2025-05-03T00:00:00Z", "value": 1.3, "unit": "kWh" },
+        { "timestamp": "2025-05-03T01:00:00Z", "value": 1.2, "unit": "kWh" },
+        { "timestamp": "2025-05-03T02:00:00Z", "value": 1.1, "unit": "kWh" },
+        { "timestamp": "2025-05-03T03:00:00Z", "value": 1.0, "unit": "kWh" },
+        { "timestamp": "2025-05-03T04:00:00Z", "value": 1.1, "unit": "kWh" },
+        { "timestamp": "2025-05-03T05:00:00Z", "value": 1.4, "unit": "kWh" },
+        { "timestamp": "2025-05-03T06:00:00Z", "value": 1.9, "unit": "kWh" },
+        { "timestamp": "2025-05-03T07:00:00Z", "value": 2.6, "unit": "kWh" },
+        { "timestamp": "2025-05-03T08:00:00Z", "value": 3.2, "unit": "kWh" },
+        { "timestamp": "2025-05-03T09:00:00Z", "value": 3.5, "unit": "kWh" },
+        { "timestamp": "2025-05-03T10:00:00Z", "value": 3.6, "unit": "kWh" },
+        { "timestamp": "2025-05-03T11:00:00Z", "value": 3.7, "unit": "kWh" },
+        { "timestamp": "2025-05-03T12:00:00Z", "value": 3.3, "unit": "kWh" },
+        { "timestamp": "2025-05-03T13:00:00Z", "value": 3.0, "unit": "kWh" },
+        { "timestamp": "2025-05-03T14:00:00Z", "value": 2.8, "unit": "kWh" },
+        { "timestamp": "2025-05-03T15:00:00Z", "value": 2.7, "unit": "kWh" },
+        { "timestamp": "2025-05-03T16:00:00Z", "value": 2.5, "unit": "kWh" },
+        { "timestamp": "2025-05-03T17:00:00Z", "value": 2.6, "unit": "kWh" },
+        { "timestamp": "2025-05-03T18:00:00Z", "value": 2.9, "unit": "kWh" },
+        { "timestamp": "2025-05-03T19:00:00Z", "value": 3.2, "unit": "kWh" },
+        { "timestamp": "2025-05-03T20:00:00Z", "value": 3.4, "unit": "kWh" },
+        { "timestamp": "2025-05-03T21:00:00Z", "value": 3.1, "unit": "kWh" },
+        { "timestamp": "2025-05-03T22:00:00Z", "value": 2.7, "unit": "kWh" },
+        { "timestamp": "2025-05-03T23:00:00Z", "value": 1.9, "unit": "kWh" }
     ]
-}
+};
+
 
 // These are all the total daily usages
 const sumDay1 = BigInt(day1.measurements.reduce((total, entry) => total + entry.value, 0) * 1e18);

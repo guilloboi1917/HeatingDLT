@@ -8,7 +8,7 @@ contract TNCY is ERC20 {
     mapping(address => bool) public billingAdmins;
     address owner;
 
-    uint256 public ratePerKwh = 1 * 10 ** 18; // 1 TNCY per kWh (placeholder)
+    uint256 public ratePerKwh = 1; // 1 TNCY per kWh (placeholder)
 
     constructor(address _initialOwner) ERC20("Tency Token", "TNCY") {
         owner = _initialOwner;

@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, Flame, House } from "lucide-react"
 import EnergyUsage from "@/components/energy-usage"
-import TenantBills from "@/components/tenant-bills"
+import TenantUtilityExpenses from "@/components/tenant-utility-expenses"
 import TokenBalance from "@/components/token-balance"
 import { formatUnits } from "ethers";
 import { ethers } from "ethers";
@@ -18,7 +18,7 @@ export default function TenantDashboard() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("usage")
 
-  let formattedTokenBalance = formatUnits(ethers.toBigInt(tokenBalance.toString()), "ether");
+  let formattedTokenBalance = Number(formatUnits(ethers.toBigInt(tokenBalance.toString()), "ether")).toFixed(2);
 
   function formatPhoneNumber(raw: string) {
     const phoneNumber = parsePhoneNumberFromString(raw, 'CH'); // 'CH' = Switzerland
@@ -69,7 +69,7 @@ export default function TenantDashboard() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="usage">Energy Usage</TabsTrigger>
-          <TabsTrigger value="bills">Bills</TabsTrigger>
+          <TabsTrigger value="bills">Utility Expenses</TabsTrigger>
           <TabsTrigger value="tokens">Tokens</TabsTrigger>
         </TabsList>
 
@@ -78,7 +78,7 @@ export default function TenantDashboard() {
         </TabsContent>
 
         <TabsContent value="bills" className="mt-4">
-          <TenantBills />
+          <TenantUtilityExpenses />
         </TabsContent>
 
         <TabsContent value="tokens" className="mt-4">
