@@ -11,7 +11,7 @@ import TenantUtilityExpenses from "@/components/tenant-utility-expenses"
 import TokenBalance from "@/components/token-balance"
 import { formatUnits } from "ethers";
 import { ethers } from "ethers";
-import { parsePhoneNumberFromString } from "libphonenumber-js"
+import { formatPhoneNumber } from "@/lib/utils"
 
 export default function TenantDashboard() {
   const { account, tokenBalance, fullName, ownerContactInfo } = useContractStore()
@@ -20,10 +20,7 @@ export default function TenantDashboard() {
 
   let formattedTokenBalance = Number(formatUnits(ethers.toBigInt(tokenBalance.toString()), "ether")).toFixed(2);
 
-  function formatPhoneNumber(raw: string) {
-    const phoneNumber = parsePhoneNumberFromString(raw, 'CH'); // 'CH' = Switzerland
-    return phoneNumber?.formatInternational() ?? raw;
-  }
+
 
   return (
     <div className="space-y-6">

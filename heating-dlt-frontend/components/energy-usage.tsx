@@ -177,8 +177,8 @@ export default function EnergyUsage() {
                 </ResponsiveContainer>
               )}
             </div>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
+          ) : (usageData?.length > 0 ? (
+            < ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
                 margin={{ top: 20, right: 20, left: 0, bottom: 40 }}
@@ -235,19 +235,21 @@ export default function EnergyUsage() {
                   cursor="pointer"
                 />
               </BarChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer>) : (<div></div>)
           )}
         </CardContent>
       </Card>
 
       {/* IPFS CID Display */}
-      {selectedDate && (
-        <Card className="p-4">
-          <div className="text-sm">
-            <span className="font-medium">IPFS CID:</span> {selectedDate.ipfsCID}
-          </div>
-        </Card>
-      )}
-    </div>
+      {
+        selectedDate && (
+          <Card className="p-4">
+            <div className="text-sm">
+              <span className="font-medium">IPFS CID:</span> {selectedDate.ipfsCID}
+            </div>
+          </Card>
+        )
+      }
+    </div >
   )
 }

@@ -1,4 +1,4 @@
-import { Bill, DailyMeasurementData, UtilityExpense } from "@/types/types";
+import { Bill, DailyMeasurementData, SmartMeter, UtilityExpense } from "@/types/types";
 import { ethers, hexlify } from "ethers";
 import { Anonymous_Pro } from "next/font/google";
 
@@ -12,6 +12,17 @@ export function parseBill(raw: any): Bill {
     dateIssuance: Number(raw.dateIssuance),
     datePaid: Number(raw.datePaid),
     description: raw.description,
+  };
+}
+
+export function parseSmartMeter(raw: any): SmartMeter {
+  return {
+    name: String(raw[0]),
+    ownerName: String(raw[1]),
+    smartMeterAddress: String(raw[2]),
+    smartMeterId: String(raw[3]),
+    assignedTenantAddress: String(raw[4]),
+    isActive: Boolean(raw[5])
   };
 }
 

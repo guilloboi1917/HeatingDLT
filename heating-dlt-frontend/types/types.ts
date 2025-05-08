@@ -1,7 +1,8 @@
 // add types for bills, tenants, etc.
 export interface Tenant {
   address: string;
-  name?: string;
+  assignedSmartMeterAddress: string;
+  name: string;
 }
 
 export interface DailyMeasurementData {
@@ -29,6 +30,7 @@ export interface SmartMeter {
   ownerName: string;
   smartMeterAddress: string;
   smartMeterId: string;
+  assignedTenantAddress: string;
   isActive?: boolean;
 }
 

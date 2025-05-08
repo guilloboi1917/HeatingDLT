@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Trash2, UserPlus } from "lucide-react"
+import { Trash2, UserPlus, Unplug, Contact, HousePlug } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -19,18 +20,25 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { Tenant } from "@/types/types"
+import { SmartMeter, Tenant } from "@/types/types"
+import { isZeroAddress } from "@/lib/utils"
+import { ethers } from "ethers"
 
 
 export default function TenantManagement() {
-  const { getTenants, addTenant, removeTenant } = useContractStore()
+  const { getTenants, addTenant, removeTenant, assignSmartMeter, getSmartMeters } = useContractStore()
   const { toast } = useToast()
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [newTenantAddress, setNewTenantAddress] = useState("")
   const [newTenantName, setNewTenantName] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingAssigment, setIsLoadingAssigment] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false)
+  const [selectedSmartMeter, setSelectedSmartMeter] = useState<string>("");
+  const [availableSmartMeters, setAvailableSmartMeters] = useState<SmartMeter[]>([]);
+
 
   useEffect(() => {
     fetchTenants()
@@ -40,6 +48,14 @@ export default function TenantManagement() {
     try {
       setIsLoading(true)
       const fetchedTenants = await getTenants()
+
+
+      const fetchedSmartMeters = await getSmartMeters();
+
+      const filteredSmartMeters: SmartMeter[] = fetchedSmartMeters.filter(sm => isZeroAddress(sm.assignedTenantAddress))
+
+      // Filter smart meters that are unassigned (assignedTenant is zero address)
+      setAvailableSmartMeters(filteredSmartMeters);
 
       setTenants(fetchedTenants)
     } catch (error) {
@@ -100,7 +116,6 @@ export default function TenantManagement() {
 
   const handleRemoveTenant = async (address: string) => {
     try {
-      setIsLoading(true)
 
       const success = await removeTenant(address)
 
@@ -118,7 +133,6 @@ export default function TenantManagement() {
           description: "Failed to remove the tenant from the blockchain",
           variant: "destructive",
         })
-        setIsLoading(false)
       }
     } catch (error) {
       console.error("Error removing tenant:", error)
@@ -127,9 +141,50 @@ export default function TenantManagement() {
         description: "Failed to remove the tenant from the blockchain",
         variant: "destructive",
       })
-      setIsLoading(false)
     }
   }
+
+  const handleSelect = async (tenantAddress: string) => {
+    if (!selectedSmartMeter) return;
+
+    handleAssignSmartMeter(tenantAddress, selectedSmartMeter);
+  };
+
+  const handleAssignSmartMeter = async (tenantAddress: string, smartMeterAddress: string) => {
+    try {
+      setIsSubmitting(true);
+
+      const success = await assignSmartMeter(tenantAddress, smartMeterAddress);
+
+      if (success) {
+        setSelectedSmartMeter("");
+        setAssignmentDialogOpen(false);
+        toast({
+          title: "SmartMeter Assigned",
+          description: `SmartMeter Assignment Successful`,
+        })
+
+        // Refresh the tenants list
+        await fetchTenants()
+      } else {
+        toast({
+          title: "Error Assigning SmartMeter",
+          description: "Failed to assign SmartMeter",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error Assigning SmartMeter:", error)
+      toast({
+        title: "Error Assigning SmartMeter",
+        description: "Failed to assign SmartMeter",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
 
   return (
     <div className="space-y-6">
@@ -194,6 +249,7 @@ export default function TenantManagement() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Wallet Address</TableHead>
+                  <TableHead>Assigned SmartMeter</TableHead>
                   <TableHead className="w-[100px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -204,6 +260,62 @@ export default function TenantManagement() {
                     <TableCell className="font-mono text-xs">
                       {tenant.address.substring(0, 6)}...{tenant.address.substring(tenant.address.length - 4)}
                     </TableCell>
+                    {!isZeroAddress(tenant.assignedSmartMeterAddress) ? <TableCell className="font-mono text-xs">
+                      {tenant.assignedSmartMeterAddress.substring(0, 6)}...{tenant.assignedSmartMeterAddress.substring(tenant.assignedSmartMeterAddress.length - 4)}
+                    </TableCell> :
+                      <TableCell>
+                        <Dialog open={assignmentDialogOpen} onOpenChange={setAssignmentDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <HousePlug className="h-4 w-4"></HousePlug>
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Assign Smart Meter</DialogTitle>
+                              <DialogDescription>
+                                Assign an available smart meter to this tenant
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                              <div className="grid gap-2">
+                                <Label htmlFor="smartMeter">Available Smart Meters</Label>
+                                <Select
+                                  value={selectedSmartMeter}
+                                  onValueChange={setSelectedSmartMeter}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select a smart meter" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {availableSmartMeters.length > 0 ? (
+                                      availableSmartMeters.map((sm) => (
+                                        <SelectItem key={sm.smartMeterAddress} value={sm.smartMeterAddress}>
+                                          {sm.smartMeterAddress} (ID: {sm.smartMeterId})
+                                        </SelectItem>
+                                      ))
+                                    ) : (
+                                      <div className="py-2 text-center text-sm text-muted-foreground px-2">
+                                        No available smart meters
+                                      </div>
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button
+                                onClick={() => handleSelect(tenant.address)}
+                                disabled={isSubmitting || !selectedSmartMeter || availableSmartMeters.length === 0}
+                              >
+                                {isSubmitting ? "Assigning..." : "Assign"}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </TableCell>
+                    }
+
                     <TableCell>
                       <Button variant="ghost" size="icon" onClick={() => handleRemoveTenant(tenant.address)}>
                         <Trash2 className="h-4 w-4" />
@@ -216,6 +328,6 @@ export default function TenantManagement() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </div >
   )
 }

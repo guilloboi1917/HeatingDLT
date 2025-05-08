@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Trash2, PlusCircle } from "lucide-react"
+import { Trash2, PlusCircle, PowerOff, Power } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -26,7 +26,9 @@ export default function SmartMeterManagement() {
   const { toast } = useToast()
   const [meters, setMeters] = useState<SmartMeter[]>([])
   const [newMeterAddress, setNewMeterAddress] = useState("")
-  const [newMeterLocation, setNewMeterLocation] = useState("")
+  const [newSmartMeterId, setNewSmartMeterId] = useState("")
+  const [newOwnerName, setNewOwnerName] = useState("")
+  const [newSmartMeterName, setNewSmartMeterName] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -53,7 +55,7 @@ export default function SmartMeterManagement() {
   }
 
   const handleAddSmartMeter = async () => {
-    if (!newMeterAddress || !newMeterLocation) return
+    if (!newMeterAddress || !newSmartMeterId) return
 
     try {
       setIsSubmitting(true)
@@ -63,16 +65,21 @@ export default function SmartMeterManagement() {
         throw new Error("Invalid Ethereum address")
       }
 
-      const success = await addSmartMeter(newMeterAddress, newMeterLocation)
+      const success = await registerSmartMeter(newSmartMeterName, newOwnerName, newMeterAddress, newSmartMeterId)
+      console.log("success: ", success)
 
       if (success) {
         setNewMeterAddress("")
-        setNewMeterLocation("")
+        setNewSmartMeterId("")
+        setNewOwnerName("")
+        setNewSmartMeterName("")
         setDialogOpen(false)
+
+        console.log("Closing Dialog")
 
         toast({
           title: "Smart meter added",
-          description: `Smart meter for ${newMeterLocation} has been added`,
+          description: `Smart meter for ${newSmartMeterId} has been added`,
         })
 
         // Refresh the meters list
@@ -97,7 +104,7 @@ export default function SmartMeterManagement() {
   }
 
   const handleRemoveSmartMeter = async (id: number, location: string) => {
-    return false; 
+    return false;
     try {
       setIsLoading(true)
 
@@ -152,12 +159,21 @@ export default function SmartMeterManagement() {
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="meterLocation">Location</Label>
+                  <Label htmlFor="smartMeterName">Device Name</Label>
                   <Input
-                    id="meterLocation"
-                    placeholder="Enter meter location (e.g., Apartment 101)"
-                    value={newMeterLocation}
-                    onChange={(e) => setNewMeterLocation(e.target.value)}
+                    id="smartMeterName"
+                    placeholder="e.g. Apartment 101"
+                    value={newSmartMeterName}
+                    onChange={(e) => setNewSmartMeterName(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="ownerName">Owner Name</Label>
+                  <Input
+                    id="ownerName"
+                    placeholder="e.g. Property Management Inc."
+                    value={newOwnerName}
+                    onChange={(e) => setNewOwnerName(e.target.value)}
                   />
                 </div>
                 <div className="grid gap-2">
@@ -169,9 +185,18 @@ export default function SmartMeterManagement() {
                     onChange={(e) => setNewMeterAddress(e.target.value)}
                   />
                 </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="smartMeterId">SmartMeter Id (unique)</Label>
+                  <Input
+                    id="smartMeterId"
+                    placeholder="e.g. SM-1001"
+                    value={newSmartMeterId}
+                    onChange={(e) => setNewSmartMeterId(e.target.value)}
+                  />
+                </div>
               </div>
               <DialogFooter>
-                <Button onClick={handleAddSmartMeter} disabled={isSubmitting || !newMeterAddress || !newMeterLocation}>
+                <Button onClick={handleAddSmartMeter} disabled={isSubmitting || !newMeterAddress || !newSmartMeterId}>
                   {isSubmitting ? "Adding..." : "Add Smart Meter"}
                 </Button>
               </DialogFooter>
@@ -206,7 +231,7 @@ export default function SmartMeterManagement() {
                       {meter.smartMeterAddress.substring(0, 6)}...{meter.smartMeterAddress.substring(meter.smartMeterAddress.length - 4)}
                     </TableCell>
                     <TableCell>{meter.smartMeterId}</TableCell>
-                    <TableCell>{meter.isActive}</TableCell>
+                    <TableCell>{meter.isActive ? <Power className="stroke-green-400  h-4 w-4 "></Power> : <PowerOff className="stroke-red-400 h-4 w-4"></PowerOff>}</TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"

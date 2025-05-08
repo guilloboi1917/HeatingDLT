@@ -106,10 +106,7 @@ contract TencyManager {
             tenantUtitlityExpenses[_tenants[i]].push(validatedUtilityExpense);
 
             // Adjust balance, only placeholder
-            tncyToken.adjustTenantBalance(
-                _tenants[i],
-                amountsEach
-            );
+            tncyToken.adjustTenantBalance(_tenants[i], amountsEach);
         }
 
         // No need for event here, as validator already creates one
@@ -176,29 +173,71 @@ contract TencyManager {
         );
     }
 
-    // Add and remove tenants
-    function addTenant(
+    function assignSmartMeter(
         address _tenant,
-        string memory _fullName,
+        address _smartMeterAddress
+    ) external onlyMaster {
+        require(whitelistedTenants[_tenant], "Tenant not found");
+        require(whitelistedMeters[_smartMeterAddress], "SmartMeter not found");
+        require(smartMeters[_smartMeterAddress].assignedTenant != _tenant || tenants[_tenant].   != _smartMeterAddress, "Already Assigned!");
+
+        smartMeters[_smartMeterAddress].assignedTenant = _tenant;
+        tenants[_tenant].assignedSmartMeter = _smartMeterAddress;
+    }
+
+    function removeAssignedSmartMeter(
+        address _tenant,
         address _smartMeterAddress
     ) external onlyMaster {
         require(
-            smartMeters[_smartMeterAddress].assignedTenant == address(0),
-            "SmartMeter already assigned!"
+            _smartMeterAddress == address(_smartMeterAddress),
+            "Invalid address"
+        );
+        require(_tenant == address(_tenant), "Invalid address");
+        require(whitelistedMeters[_smartMeterAddress], "Smart Meter not found");
+
+        bool isAssignedTenant = smartMeters[_smartMeterAddress]
+            .assignedTenant == _tenant;
+        bool isAssignedSmartMeter = tenants[_tenant].assignedSmartMeter ==
+            _smartMeterAddress;
+
+        require(
+            isAssignedTenant || isAssignedSmartMeter,
+            "Smart Meter not assigned"
         );
 
+        if (isAssignedSmartMeter) {
+            tenants[_tenant].assignedSmartMeter = address(0);
+        }
+
+        if (isAssignedTenant) {
+            smartMeters[_smartMeterAddress].assignedTenant = address(0);
+        }
+
+        // Emit event
+    }
+
+    // Add and remove tenants
+    function addTenant(
+        address _tenant,
+        string memory _fullName
+    ) external onlyMaster {
+        require(_tenant == address(_tenant), "Invalid Address");
+        require(!whitelistedTenants[_tenant], "Tenant already exists");
         tenants[_tenant] = Tenant({
             fullName: _fullName,
-            assignedSmartMeter: _smartMeterAddress
+            tenantAddress: _tenant,
+            assignedSmartMeter: address(0)
         });
+
+        console.log("Tenant Added");
+        console.log(tenants[_tenant].assignedSmartMeter);
 
         tenantsArray.push(_tenant);
 
         tenantNamesArray.push(_fullName);
 
         whitelistedTenants[_tenant] = true;
-
-        smartMeters[_smartMeterAddress].assignedTenant = _tenant;
     }
 
     function removeTenant(address _tenant) external onlyMaster {
@@ -230,9 +269,15 @@ contract TencyManager {
         external
         view
         onlyMaster
-        returns (address[] memory, string[] memory)
+        returns (address[] memory, address[] memory, string[] memory)
     {
-        return (tenantsArray, tenantNamesArray);
+        uint length = tenantsArray.length;
+        address[] memory assignedSmartMeterAddresses = new address[](length);
+        for (uint i = 0; i < tenantsArray.length; i++) {
+            assignedSmartMeterAddresses[i] = tenants[tenantsArray[i]]
+                .assignedSmartMeter;
+        }
+        return (tenantsArray, assignedSmartMeterAddresses, tenantNamesArray);
     }
 
     // Get the tenant's name

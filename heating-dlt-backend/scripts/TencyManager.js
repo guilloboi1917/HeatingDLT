@@ -43,7 +43,7 @@ async function addAndRecord(contract, meter, data) {
 
 async function main() {
     // Get accounts
-    const [master, meter1, meter2, tenant1, tenant2] = await ethers.getSigners();
+    const [master, meter1, meter2, meter3, meter4, tenant1, tenant2, tenant3, tenant4] = await ethers.getSigners();
 
     // Deploy factory
     const TencyManager = await ethers.getContractFactory("TencyManager");
@@ -87,25 +87,47 @@ async function main() {
         "SM-1002"
     );
     await tx.wait();
-    console.log("Registered Smart Meter 1");
+    console.log("Registered Smart Meter 2");
 
     // Whitelist tenant1
     tx = await manager.connect(master).addTenant(
         tenant1.address,
-        "Peter Lustig",
-        meter1.address
+        "Peter Lustig"
     );
     await tx.wait();
     console.log("Added Tenant 1");
 
-    // Whitelist tenant1
+    // Assign SmartMeter
+    tx = await manager.connect(master).assignSmartMeter(
+        tenant1.address,
+        meter1.address
+    );
+    await tx.wait();
+    console.log("Assigned smart meter to tenant 1");
+
+    // Whitelist tenant 2
     tx = await manager.connect(master).addTenant(
         tenant2.address,
-        "Stefan Sauber",
+        "Stefan Sauber"
+    );
+    await tx.wait();
+    console.log("Added Tenant 2: ", tenant2.address);
+
+    // Assign SmartMeter
+    tx = await manager.connect(master).assignSmartMeter(
+        tenant2.address,
         meter2.address
     );
     await tx.wait();
-    console.log("Added Tenant 2");
+    console.log("Assigned smart meter to tenant 2");
+
+    // Whitelist tenant1
+    tx = await manager.connect(master).addTenant(
+        tenant3.address,
+        "Noah Isaak"
+    );
+    await tx.wait();
+    console.log("Only Added Tenant 3: ", tenant3.address);
 
     // Now let's mint some tokens and interact with the contract
     tx = await tncyContract.connect(master).mint(master, ethers.parseUnits("1000", 18));
@@ -130,18 +152,17 @@ async function main() {
     await addAndRecord(manager, meter2, day3);
 
 
-    let readTx = await manager.connect(tenant1).getDailyUsage(meter1);
-    console.log("Daily Usage: ", readTx);
+    // let readTx = await manager.connect(tenant1).getDailyUsage(meter1);
+    // console.log("Daily Usage: ", readTx);
 
-    tx = await manager.connect(master).getUtilityExpenses();
-    console.log(tx);
+    // tx = await manager.connect(master).getUtilityExpenses();
+    // console.log(tx);
 
-    tx = await manager.connect(tenant1).getTenantUtilityExpenses(tenant1);
-    console.log(tx);
+    // tx = await manager.connect(tenant1).getTenantUtilityExpenses(tenant1);
+    // console.log(tx);
 
 
     const amount = ethers.parseEther("150", 18);
-    console.log(amount);
 
     // Now a landlord wants to create an expense
     tx = await manager.connect(master).recordUtilityExpense(
@@ -153,8 +174,8 @@ async function main() {
         [tenant1, tenant2]
     )
 
-    tx = await manager.connect(tenant1).getTenantUtilityExpenses(tenant1);
-    console.log(tx);
+    // tx = await manager.connect(tenant1).getTenantUtilityExpenses(tenant1);
+    // console.log(tx);
 }
 
 main()

@@ -24,6 +24,7 @@ struct UtilityExpense {
 
 struct Tenant {
     string fullName;
+    address tenantAddress;
     address assignedSmartMeter;
 }
 

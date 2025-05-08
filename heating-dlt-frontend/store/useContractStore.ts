@@ -14,8 +14,10 @@ import {
 import {
   parseBill,
   parseDailyMeasurements,
+  parseSmartMeter,
   parseUtilityExpense,
 } from "@/lib/parseTypes";
+import { add } from "date-fns";
 
 const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
@@ -48,15 +50,19 @@ type ContractState = {
     ownerName: string,
     address: string,
     smartMeterId: string
-  ) => void;
+  ) => Promise<boolean>;
   //   getSmartMeterInfo: (address: string) => Promise<SmartMeter>;
+  assignSmartMeter: (
+    tenantAddress: string,
+    smartMeterAddress: string
+  ) => Promise<void>;
 
   getEnergyUsage: (address: string) => Promise<DailyMeasurementData[]>;
 
   // Utility Expenses
   getUtilityExpenses: () => Promise<UtilityExpense[]>;
   getTenantUtilityExpenses: (address: string) => Promise<UtilityExpense[]>;
-  recordUtilityExpense: () => Promise<void>;
+  recordUtilityExpense: () => Promise<boolean>;
 };
 
 export const useContractStore = create<ContractState>((set, get) => ({
@@ -176,13 +182,15 @@ export const useContractStore = create<ContractState>((set, get) => ({
     }
     try {
       const fetchedInfo = await contract.getTenants();
+      const fetchedTenantsName: string[] = fetchedInfo[2];
       const fetchedTenantsAddress: string[] = await fetchedInfo[0];
-      const fetchedTenantsName: string[] = fetchedInfo[1];
+      const fetchedAssignedSmartMeterAddress: string[] = fetchedInfo[1];
 
       const tenants: Tenant[] = fetchedTenantsAddress.map(
         (address: string, index) => ({
           address: address,
           name: fetchedTenantsName[index] + " (Tenant " + (index + 1) + ")",
+          assignedSmartMeterAddress: fetchedAssignedSmartMeterAddress[index],
         })
       );
 
@@ -211,7 +219,6 @@ export const useContractStore = create<ContractState>((set, get) => ({
 
     try {
       const tx = await contract.addTenant(address, name);
-      await tx.await();
       return true;
     } catch (error) {
       console.error("Error adding tenant:", error);
@@ -232,7 +239,6 @@ export const useContractStore = create<ContractState>((set, get) => ({
 
     try {
       const tx = await contract.removeTenant(address);
-      await tx.await();
       return true;
     } catch (error) {
       console.error("Error removing tenant:", error);
@@ -254,13 +260,13 @@ export const useContractStore = create<ContractState>((set, get) => ({
 
     try {
       const smartMetersAddress: string[] = await contract.getSmartMeters();
-      console.log("smart meter addresses", smartMetersAddress);
 
       // Use Promise.all for async mapping
       const smartMeterPromises = smartMetersAddress.map(
         async (address: string) => {
           try {
-            return await contract.getMeterInfo(address);
+            const rawInfo = await contract.getMeterInfo(address);
+            return parseSmartMeter(rawInfo);
           } catch (err) {
             console.error(`Error fetching smartMeter ${address}:`, err);
             // Return a fallback object or null (will be filtered out)
@@ -270,6 +276,7 @@ export const useContractStore = create<ContractState>((set, get) => ({
               ownerName: "Unknown",
               smartMeterAddress: "Unknown",
               smartMeterId: "Unknown",
+              assignedTenantAddress: "Unknown",
               isActive: false,
               // other required SmartMeter properties
             } as SmartMeter;
@@ -278,9 +285,9 @@ export const useContractStore = create<ContractState>((set, get) => ({
       );
 
       // Wait for all promises and filter out nulls if needed
-      const smartMeters = (await Promise.all(smartMeterPromises)).filter(
-        Boolean
-      );
+      const smartMeters: SmartMeter[] = (
+        await Promise.all(smartMeterPromises)
+      ).filter(Boolean);
       return smartMeters;
     } catch (error) {
       console.error("Error fetching smartMeters:", error);
@@ -288,12 +295,82 @@ export const useContractStore = create<ContractState>((set, get) => ({
     }
   },
 
-  registerSmartMeter: (
+  registerSmartMeter: async (
     name: string,
     ownerName: string,
     address: string,
     smartMeterId: string
-  ): void => {},
+  ): Promise<boolean> => {
+    const { contract } = get();
+    if (!contract) {
+      toast({
+        title: "Not connected",
+        description: "Connect wallet first.",
+        variant: "destructive",
+      });
+      // return empty array
+      return false;
+    }
+
+    try {
+      const tx = await contract.registerSmartMeter(
+        name,
+        ownerName,
+        address,
+        smartMeterId
+      );
+
+      console.log("SmartMeter Registered: ", {
+        name,
+        ownerName,
+        address,
+        smartMeterId,
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Error Registering SmartMeter:", error);
+
+      toast({
+        title: "Smart Meter Registration Error",
+        description: "Smart Meter Registration Failed",
+        variant: "destructive",
+      });
+
+      return false;
+    }
+  },
+
+  assignSmartMeter: async (
+    tenantAddress: string,
+    smartMeterAddress: string
+  ): Promise<void> => {
+    const { contract } = get();
+    if (!contract) {
+      toast({
+        title: "Not connected",
+        description: "Connect wallet first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    console.log(
+      "Assigning smart meter :",
+      ethers.getAddress(tenantAddress),
+      ethers.getAddress(smartMeterAddress)
+    );
+
+    try {
+      const response = await contract.assignSmartMeter(
+        ethers.getAddress(tenantAddress),
+        ethers.getAddress(smartMeterAddress)
+      );
+      console.log(response);
+    } catch (error) {
+      console.error("Error Assigning smart meter:", error);
+      return;
+    }
+  },
 
   getEnergyUsage: async (address: string): Promise<DailyMeasurementData[]> => {
     const { contract } = get();
@@ -383,33 +460,9 @@ export const useContractStore = create<ContractState>((set, get) => ({
     }
   },
 
-  recordUtilityExpense: async (): Promise<void> => {
-    return;
+  recordUtilityExpense: async (): Promise<boolean> => {
+    return true;
   },
-
-  //   addSmartMeter: async (meterId: string, location: string) => {
-  //     const { contract, account } = get();
-  //     if (!contract || !account) {
-  //       toast({
-  //         title: "Not connected",
-  //         description: "Connect wallet first.",
-  //         variant: "destructive",
-  //       });
-  //       return;
-  //     }
-  //     try {
-  //       const tx = await contract.addSmartMeter(meterId, location);
-  //       await tx.wait();
-  //       toast({ title: "Success", description: "Smart meter added!" });
-  //     } catch (err) {
-  //       console.error(err);
-  //       toast({
-  //         title: "Error",
-  //         description: "Failed to add smart meter.",
-  //         variant: "destructive",
-  //       });
-  //     }
-  //   },
 
   //   mintToken: async (amount: number) => {
   //     const { contract, account } = get();
