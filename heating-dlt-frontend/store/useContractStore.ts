@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ethers } from "ethers";
+import { ethers, BigNumberish } from "ethers";
 import { toast } from "@/components/ui/use-toast";
 import TencyManagerAbi from "@/contracts/TencyManager.json";
 import TNCYAbi from "@/contracts/TNCY.json";
@@ -62,7 +62,13 @@ type ContractState = {
   // Utility Expenses
   getUtilityExpenses: () => Promise<UtilityExpense[]>;
   getTenantUtilityExpenses: (address: string) => Promise<UtilityExpense[]>;
-  recordUtilityExpense: () => Promise<boolean>;
+  recordUtilityExpense: (
+    amount: number,
+    date: Date,
+    utilityType: string,
+    description: string,
+    tenants: string[]
+  ) => Promise<void>;
 };
 
 export const useContractStore = create<ContractState>((set, get) => ({
@@ -460,8 +466,43 @@ export const useContractStore = create<ContractState>((set, get) => ({
     }
   },
 
-  recordUtilityExpense: async (): Promise<boolean> => {
-    return true;
+  recordUtilityExpense: async (
+    amount: number,
+    date: Date,
+    utilityType: string,
+    description: string,
+    tenants: string[]
+  ): Promise<void> => {
+    const { contract, account } = get();
+    if (!contract) {
+      toast({
+        title: "Not connected",
+        description: "Connect wallet first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const formattedAmount = ethers.toBigInt(amount);
+      console.log(formattedAmount);
+      const formattedDate = ethers.toBigInt(Math.floor(date.getTime() / 1000));
+      const formattedTenantsAddress: string[] = tenants.map(
+        (address: string, index) => ethers.getAddress(address)
+      );
+
+      // Need to create a CID here
+
+      console.log(formattedTenantsAddress);
+      const recordTx = await contract.recordUtilityExpense(formattedAmount, formattedDate, utilityType, description, "", formattedTenantsAddress);
+
+      return;
+    } catch (err) {
+      console.error("Error fetching Utility Expenses:", err);
+      return;
+    }
+
+    return;
   },
 
   //   mintToken: async (amount: number) => {

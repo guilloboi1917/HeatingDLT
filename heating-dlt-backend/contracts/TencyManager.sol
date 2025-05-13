@@ -179,7 +179,7 @@ contract TencyManager {
     ) external onlyMaster {
         require(whitelistedTenants[_tenant], "Tenant not found");
         require(whitelistedMeters[_smartMeterAddress], "SmartMeter not found");
-        require(smartMeters[_smartMeterAddress].assignedTenant != _tenant || tenants[_tenant].   != _smartMeterAddress, "Already Assigned!");
+        require(smartMeters[_smartMeterAddress].assignedTenant != _tenant || tenants[_tenant].assignedSmartMeter != _smartMeterAddress, "Already Assigned!");
 
         smartMeters[_smartMeterAddress].assignedTenant = _tenant;
         tenants[_tenant].assignedSmartMeter = _smartMeterAddress;

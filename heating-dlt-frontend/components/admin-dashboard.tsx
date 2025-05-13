@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, House } from "lucide-react"
 import TenantManagement from "@/components/tenant-management"
 import SmartMeterManagement from "@/components/smart-meter-management"
-import BillsOverview from "@/components/bills-overview"
+import AdminUtilityExpenses from "@/components/admin-utility-expenses-overview"
 import { formatPhoneNumber } from "@/lib/utils"
 
 export default function AdminDashboard() {
@@ -57,7 +57,7 @@ export default function AdminDashboard() {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="tenants">Tenants</TabsTrigger>
           <TabsTrigger value="meters">Smart Meters</TabsTrigger>
-          <TabsTrigger value="bills">Bills</TabsTrigger>
+          <TabsTrigger value="utilityExpenses">Utility Expenses</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tenants" className="mt-4">
@@ -68,8 +68,8 @@ export default function AdminDashboard() {
           <SmartMeterManagement />
         </TabsContent>
 
-        <TabsContent value="bills" className="mt-4">
-          <BillsOverview />
+        <TabsContent value="utilityExpenses" className="mt-4">
+          <AdminUtilityExpenses />
         </TabsContent>
       </Tabs>
     </div>

@@ -11,8 +11,6 @@ import { formatDate } from "@/lib/utils"
 import { Tenant, Bill } from "@/types/types"
 import { formatUnits, ethers } from "ethers";
 
-// Lots to do here, date formatting etc etc.
-
 export default function BillsOverview() {
   const { getBills, getTenants } = useContractStore()
   const { toast } = useToast()
