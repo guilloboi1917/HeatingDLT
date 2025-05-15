@@ -18,9 +18,12 @@ export default function TenantDashboard() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("usage")
 
-  let formattedTokenBalance = Number(formatUnits(ethers.toBigInt(tokenBalance.toString()), "ether")).toFixed(2);
-
-
+  const formattedTokenBalance = Number(
+    formatUnits(
+      BigInt(tokenBalance), // Directly use BigInt constructor
+      "ether"
+    )
+  ).toFixed(2);
 
   return (
     <div className="space-y-6">

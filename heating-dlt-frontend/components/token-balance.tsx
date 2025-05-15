@@ -16,8 +16,13 @@ export default function TokenBalance() {
   const [topUpAmount, setTopUpAmount] = useState<number>(100)
   const [isProcessing, setIsProcessing] = useState(false)
 
-  let formattedTokenBalance = formatUnits(ethers.toBigInt(tokenBalance.toString()), "ether");
-
+  const formattedTokenBalance = Number(
+    formatUnits(
+      BigInt(tokenBalance), // Directly use BigInt constructor
+      "ether"
+    )
+  ).toFixed(2);
+  
   const handleTopUp = async () => {
     console.log("Topped up")
     return
@@ -73,7 +78,7 @@ export default function TokenBalance() {
         <CardContent className="text-center">
           <div className="text-5xl font-bold mb-6">{formattedTokenBalance}</div>
           <p className="text-slate-600 dark:text-slate-300 mb-6">
-          TNCY tokens are used to pay for your heating bills. Top up your balance to ensure uninterrupted service.
+            TNCY tokens are used to pay for your heating bills. Top up your balance to ensure uninterrupted service.
           </p>
 
           <div className="space-y-4">
@@ -107,7 +112,7 @@ export default function TokenBalance() {
             <div>
               <h3 className="font-semibold mb-1">What are TNCY tokens?</h3>
               <p className="text-slate-600 dark:text-slate-300">
-              TNCY tokens are the digital currency used to pay for heating services in this building. Each token
+                TNCY tokens are the digital currency used to pay for heating services in this building. Each token
                 represents a unit of heating energy.
               </p>
             </div>

@@ -16,7 +16,7 @@ export interface IPFSMeasurementData {
 
 async function getFromLocalIPFS(cid: string): Promise<string> {
   const response = await fetch(
-    `http://127.0.0.1:5001/api/v0/block/get?arg=${cid}e`,
+    `http://127.0.0.1:5001/api/v0/block/get?arg=${cid}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -40,7 +40,7 @@ export async function fetchIPFSMeasurementData(
     const parsedCid = CID.parse(cid);
     console.log("2 - CID decoded:", parsedCid.toString());
 
-    // Fetch and collect chunks from the Helia UnixFS interface
+    // Fetch and collect chunks 
     const data = await getFromLocalIPFS(cid);
 
     const parsedData: IPFSMeasurementData = JSON.parse(data);
