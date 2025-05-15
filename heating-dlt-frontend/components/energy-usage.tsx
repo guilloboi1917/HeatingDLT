@@ -18,7 +18,7 @@ import {
   LineChart,
   Line
 } from "recharts";
-import { fetchIPFSData } from "@/lib/ipfs"
+import { fetchIPFSMeasurementData } from "@/lib/ipfs"
 
 export default function EnergyUsage() {
   const { getEnergyUsage, account } = useContractStore()
@@ -48,7 +48,7 @@ export default function EnergyUsage() {
     try {
       // Fetch hourly data from IPFS
       console.log("Fetching IPFS data: ", data.ipfsCID);
-      const ipfsData = await fetchIPFSData(data.ipfsCID);
+      const ipfsData = await fetchIPFSMeasurementData(data.ipfsCID);
       setHourlyData(ipfsData.measurements.map(m => ({
         ...m,
         hour: new Date(m.timestamp).getHours()

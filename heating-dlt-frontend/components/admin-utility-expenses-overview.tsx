@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useContractStore } from "@/store/useContractStore"
 import { useToast } from "@/components/ui/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,7 +14,7 @@ import { Bill, UtilityExpense } from "@/types/types"
 import { formatUnits, ethers } from "ethers";
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { HousePlus } from "lucide-react"
+import { HousePlus, FilePlus, FileChartColumn } from "lucide-react"
 import {
     Dialog,
     DialogContent,
@@ -24,10 +24,13 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
+import { useFilePicker } from 'use-file-picker';
+import { putPDFToIPFSHelper, downloadFromIPFS } from "@/lib/ipfs"
+
 
 
 export default function AdminUtilityExpenses() {
-    const { getUtilityExpenses, account } = useContractStore();
+    const { getUtilityExpenses, recordUtilityExpense, account, getTenants } = useContractStore();
     const [utilityExpenses, setUtilityExpenses] = useState<UtilityExpense[] | null>([]);
     const [filteredExpenses, setFilteredExpenses] = useState<UtilityExpense[] | null>([]);
     const [isLoading, setIsLoading] = useState(true)
@@ -37,12 +40,26 @@ export default function AdminUtilityExpenses() {
     const [dialogOpen, setDialogOpen] = useState(false)
 
     // Record Utility Expense states
-    const [amountTNCY, setAmountTNCY] = useState<string>("");
+    const [amountTNCY, setAmountTNCY] = useState<number>(0);
+    const [issuanceDate, setIssuanceDate] = useState<string>("");
+    const [utilityType, setUtilityType] = useState<string>("");
+    const [description, setDescription] = useState<string>("");
+    const [selectedTenants, setSelectedTenants] = useState<string[]>([])
+    const [tenantAddresses, setTenantAddresses] = useState<string[]>([]);
 
     // Filter states
     const [searchTerm, setSearchTerm] = useState("");
     const [typeFilter, setTypeFilter] = useState("all");
     const [dateFilter, setDateFilter] = useState("");
+
+    const [selectedPDFFile, setSelectedPDFFile] = useState<File | null>(null);
+
+    // File picker
+    const { openFilePicker, plainFiles } = useFilePicker({
+        accept: '.pdf',
+        multiple: false,
+        readAs: 'ArrayBuffer', // important if you want to pass raw PDF content
+    });
 
     useEffect(() => {
         fetchUtilityExpenses();
@@ -53,6 +70,47 @@ export default function AdminUtilityExpenses() {
             applyFilters();
         }
     }, [utilityExpenses, searchTerm, typeFilter, dateFilter])
+
+    // This effect runs when a file is selected
+    useEffect(() => {
+        const uploadFile = async () => {
+            if (plainFiles.length === 0) return;
+
+            setSelectedPDFFile(plainFiles[0]);
+            console.log("New PDF File selected: ", plainFiles[0]);
+        };
+
+        uploadFile();
+    }, [plainFiles]);
+
+    // Fetch tenants on mount
+    useEffect(() => {
+        const fetchTenants = async () => {
+            const tenants = await getTenants();
+            const addresses = tenants.map((t) => t.address);
+            setTenantAddresses(addresses);
+        };
+
+        fetchTenants();
+    }, []);
+
+    const toggleSelection = (value: string) => {
+        if (value === "ALL") {
+            // Toggle all selected
+            if (selectedTenants.length === tenantAddresses.length) {
+                setSelectedTenants([]); // deselect all
+            } else {
+                setSelectedTenants(tenantAddresses); // select all
+            }
+        } else {
+            // Toggle individual selection
+            setSelectedTenants((prev) =>
+                prev.includes(value)
+                    ? prev.filter((v) => v !== value)
+                    : [...prev, value]
+            );
+        }
+    };
 
     const fetchUtilityExpenses = async () => {
         try {
@@ -74,7 +132,28 @@ export default function AdminUtilityExpenses() {
     }
 
     const handleAddUtilityExpense = async () => {
+        // First get the CID
+        const cid = selectedPDFFile ? await putPDFToIPFSHelper(selectedPDFFile) : "";
 
+        await recordUtilityExpense(amountTNCY, new Date(issuanceDate), utilityType, description, cid, selectedTenants);
+
+        setDialogOpen(false);
+        setIsSubmitting(false);
+    }
+
+    const handlePDFDownload = async (cid: string, type: string) => {
+        console.log("Downloading: ", cid);
+        await downloadFromIPFS(cid, type);
+    }
+
+    const isAddingExpenseDisabled = (): boolean => {
+        return isSubmitting || !amountTNCY || !issuanceDate || !utilityType || !description || !selectedTenants
+
+    }
+
+    const handleUploadPDF = async () => {
+        console.log("Opening file picker...");
+        openFilePicker(); // This shows the file dialog
     }
 
     const applyFilters = () => {
@@ -180,49 +259,114 @@ export default function AdminUtilityExpenses() {
                                             id="amountTNCY"
                                             placeholder="Enter TNCY Amount e.g. 200 TNCY"
                                             value={amountTNCY}
-                                            onChange={(e) => setAmountTNCY(e.target.value)}
+                                            onChange={(e) => setAmountTNCY(Number(e.target.value))}
                                         />
                                     </div>
                                     <div className="grid gap-2">
                                         <Label htmlFor="issuanceDate">Date</Label>
                                         <Input
+                                            type="date"
                                             id="issuanceDate"
-                                            placeholder="e.g. 14.5.2025"
-                                            value={amountTNCY}
-                                            onChange={(e) => setAmountTNCY(e.target.value)}
+                                            value={issuanceDate}
+                                            onChange={(e) => setIssuanceDate(e.target.value)}
                                         />
                                     </div>
                                     <div className="grid gap-2">
                                         <Label htmlFor="utilityType">Utility Type</Label>
                                         <Input
                                             id="utilityType"
+                                            list="utility-types"
                                             placeholder="e.g. REPAIRS"
-                                            value={amountTNCY}
-                                            onChange={(e) => setAmountTNCY(e.target.value)}
+                                            value={utilityType}
+                                            onChange={(e) => setUtilityType(e.target.value)}
                                         />
+                                        <datalist id="utility-types">
+                                            <option value="REPAIRS" />
+                                            <option value="WATER" />
+                                            <option value="ELECTRICITY" />
+                                            <option value="GAS" />
+                                            <option value="INTERNET" />
+                                            <option value="SECURITY" />
+                                        </datalist>
                                     </div>
                                     <div className="grid gap-2">
                                         <Label htmlFor="description">Short Description</Label>
                                         <Input
                                             id="description"
                                             placeholder="e.g. Hallway door did not close properly"
-                                            value={amountTNCY}
-                                            onChange={(e) => setAmountTNCY(e.target.value)}
+                                            value={description}
+                                            onChange={(e) => setDescription(e.target.value)}
                                         />
                                     </div>
                                     <div className="grid gap-2">
                                         <Label htmlFor="tenantsList">List of Tenants</Label>
-                                        <Input
-                                            id="tenantsList"
-                                            placeholder="[0x..., 0x...]"
-                                            value={amountTNCY}
-                                            onChange={(e) => setAmountTNCY(e.target.value)}
-                                        />
+                                        <Select
+                                            // A dummy value to keep it controlled — not standard usage, but works
+                                            value=""
+                                            onValueChange={toggleSelection}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue
+                                                    placeholder={
+                                                        selectedTenants.length === tenantAddresses.length
+                                                            ? "All Tenants Selected"
+                                                            : selectedTenants.length > 0
+                                                                ? `${selectedTenants.length} selected`
+                                                                : "Select tenants"
+                                                    }
+                                                />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="ALL">
+                                                    {selectedTenants.length === tenantAddresses.length
+                                                        ? "Deselect All"
+                                                        : "Select All"}
+                                                </SelectItem>
+                                                {tenantAddresses.map((address) => (
+                                                    <SelectItem key={address} value={address}>
+                                                        <div className="flex items-center gap-2">
+                                                            <input
+                                                                type="checkbox"
+                                                                readOnly
+                                                                checked={selectedTenants.includes(address)}
+                                                                className="h-4 w-4"
+                                                            />
+                                                            <span>{address}</span>
+                                                        </div>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
+                                    <div>
+                                        <Button onClick={handleUploadPDF}>
+                                            <FilePlus className="mr-2 h-4 w-4"
+                                            />
+                                            Upload Expense PDF
+                                        </Button>
+
+                                        {selectedPDFFile ? (
+                                            <div className="mt-5 flex items-center gap-2 italic">
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedPDFFile(null);
+                                                        // Optionally trigger a re-render if needed (see note below)
+                                                    }}
+                                                    className="text-red-500 hover:text-red-700 text-sm"
+                                                    title="Remove file"
+                                                >
+                                                    ✖
+                                                </button>
+                                                <p>File: {selectedPDFFile.name}</p>
+                                            </div>
+                                        ) : (
+                                            <p className="mt-5 italic">No file selected</p>
+                                        )}                                    </div>
+
                                 </div>
                                 <DialogFooter>
-                                    <Button onClick={handleAddUtilityExpense} disabled={isSubmitting || !amountTNCY }>
-                                        {isSubmitting ? "Adding..." : "Add Tenant"}
+                                    <Button onClick={handleAddUtilityExpense} disabled={isAddingExpenseDisabled()}>
+                                        {isSubmitting ? "Adding..." : "Add Utility Expense"}
                                     </Button>
                                 </DialogFooter>
                             </DialogContent>
@@ -253,8 +397,14 @@ export default function AdminUtilityExpenses() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredExpenses.map((expense: UtilityExpense, index) => (
-                                        <TableRow key={index}>
+                                    {filteredExpenses.sort((a, b) => {
+                                        // Convert dates to timestamps for comparison
+                                        const dateA = a.dateIssuance.getTime();
+                                        const dateB = b.dateIssuance.getTime();
+
+                                        return dateB - dateA;
+                                    }).map((expense: UtilityExpense, index) => (
+                                        <TableRow key={index} className="hover:cursor-pointer" onClick={() => handlePDFDownload(expense.ipfsCID, expense.utilityType)}>
                                             <TableCell>{expense.issuer.substring(0, 6)}...{expense.issuer.substring(expense.issuer.length - 4)}</TableCell>
                                             <TableCell>{Number(formatUnits(expense.amountTNCY, 18)).toFixed(2)}</TableCell>
                                             <TableCell>{expense.dateIssuance.toLocaleDateString('de-CH')}</TableCell>
@@ -270,6 +420,6 @@ export default function AdminUtilityExpenses() {
                     )}
                 </CardContent>
             </Card>
-        </div>
+        </div >
     )
 }

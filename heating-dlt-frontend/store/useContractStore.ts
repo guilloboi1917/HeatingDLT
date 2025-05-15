@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ethers, BigNumberish } from "ethers";
+import { ethers, BigNumberish, BigNumber } from "ethers";
 import { toast } from "@/components/ui/use-toast";
 import TencyManagerAbi from "@/contracts/TencyManager.json";
 import TNCYAbi from "@/contracts/TNCY.json";
@@ -18,6 +18,7 @@ import {
   parseUtilityExpense,
 } from "@/lib/parseTypes";
 import { add } from "date-fns";
+import { putPDFToIPFSHelper } from "@/lib/ipfs";
 
 const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
@@ -67,6 +68,7 @@ type ContractState = {
     date: Date,
     utilityType: string,
     description: string,
+    cid: string,
     tenants: string[]
   ) => Promise<void>;
 };
@@ -471,6 +473,7 @@ export const useContractStore = create<ContractState>((set, get) => ({
     date: Date,
     utilityType: string,
     description: string,
+    cid: string,
     tenants: string[]
   ): Promise<void> => {
     const { contract, account } = get();
@@ -484,17 +487,30 @@ export const useContractStore = create<ContractState>((set, get) => ({
     }
 
     try {
-      const formattedAmount = ethers.toBigInt(amount);
+      const formattedAmount = ethers.parseEther(amount.toString());
       console.log(formattedAmount);
       const formattedDate = ethers.toBigInt(Math.floor(date.getTime() / 1000));
       const formattedTenantsAddress: string[] = tenants.map(
         (address: string, index) => ethers.getAddress(address)
       );
 
-      // Need to create a CID here
+      console.log("Uploading Utility Expense: ", {
+        amount: formattedAmount.toString(),
+        date: formattedDate.toString(),
+        type: utilityType,
+        description: description,
+        cid: cid,
+        tenants: formattedTenantsAddress,
+      });
 
-      console.log(formattedTenantsAddress);
-      const recordTx = await contract.recordUtilityExpense(formattedAmount, formattedDate, utilityType, description, "", formattedTenantsAddress);
+      const recordTx = await contract.recordUtilityExpense(
+        formattedAmount,
+        formattedDate,
+        utilityType,
+        description,
+        cid,
+        formattedTenantsAddress
+      );
 
       return;
     } catch (err) {

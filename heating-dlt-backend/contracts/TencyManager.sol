@@ -81,6 +81,15 @@ contract TencyManager {
     ) external onlyMaster {
         // Maybe some checks here
 
+        console.log("TNCY: ", _amountTNCY);
+        console.log("Date: ", _dateIssuance);
+        console.log("Type: ", _utilityType);
+        console.log("Descr: ", _description);
+        console.log("CID: ", _ipfsCID);
+        for (uint i = 0; i < _tenants.length; i++) {
+            console.log("Tenant", i, " :", _tenants[i]);
+        }
+
         UtilityExpense memory unvalidatedUtilityExpense = UtilityExpense(
             msg.sender,
             _amountTNCY,
@@ -105,8 +114,11 @@ contract TencyManager {
         for (uint i = 0; i < numberOfTenants; i++) {
             tenantUtitlityExpenses[_tenants[i]].push(validatedUtilityExpense);
 
+            console.log("Adjusting balance ", amountsEach);
+
             // Adjust balance, only placeholder
             tncyToken.adjustTenantBalance(_tenants[i], amountsEach);
+            console.log("Balance adjusted for: ", _tenants[i]);
         }
 
         // No need for event here, as validator already creates one
@@ -179,7 +191,11 @@ contract TencyManager {
     ) external onlyMaster {
         require(whitelistedTenants[_tenant], "Tenant not found");
         require(whitelistedMeters[_smartMeterAddress], "SmartMeter not found");
-        require(smartMeters[_smartMeterAddress].assignedTenant != _tenant || tenants[_tenant].assignedSmartMeter != _smartMeterAddress, "Already Assigned!");
+        require(
+            smartMeters[_smartMeterAddress].assignedTenant != _tenant ||
+                tenants[_tenant].assignedSmartMeter != _smartMeterAddress,
+            "Already Assigned!"
+        );
 
         smartMeters[_smartMeterAddress].assignedTenant = _tenant;
         tenants[_tenant].assignedSmartMeter = _smartMeterAddress;

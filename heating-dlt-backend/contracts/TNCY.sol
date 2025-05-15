@@ -21,6 +21,7 @@ contract TNCY is ERC20 {
         address tenant,
         uint256 tokens
     ) external onlyBillingAdmins {
+        require(balanceOf(tenant) >= tokens, "Insufficient tokens for tenant");
         _burn(tenant, tokens);
         _mint(owner, tokens);
 

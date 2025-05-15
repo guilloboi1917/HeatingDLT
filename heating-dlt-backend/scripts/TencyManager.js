@@ -131,8 +131,9 @@ async function main() {
 
     // Now let's mint some tokens and interact with the contract
     tx = await tncyContract.connect(master).mint(master, ethers.parseUnits("1000", 18));
-    tx = await tncyContract.connect(master).mint(tenant1, ethers.parseUnits("500", 18));
-    tx = await tncyContract.connect(master).mint(tenant2, ethers.parseUnits("500", 18));
+    tx = await tncyContract.connect(master).mint(tenant1, ethers.parseUnits("1000", 18));
+    tx = await tncyContract.connect(master).mint(tenant2, ethers.parseUnits("1000", 18));
+    tx = await tncyContract.connect(master).mint(tenant3, ethers.parseUnits("1000", 18));
 
     tx = await manager.connect(master).getTokenBalance();
     console.log("Master token balance: ", tx);
@@ -142,6 +143,9 @@ async function main() {
 
     tx = await manager.connect(tenant2).getTokenBalance();
     console.log("Tenant 2 token balance: ", tx);
+
+    tx = await manager.connect(tenant3).getTokenBalance();
+    console.log("Tenant 3 token balance: ", tx);
 
     await addAndRecord(manager, meter1, day1);
     await addAndRecord(manager, meter1, day2);
@@ -171,8 +175,15 @@ async function main() {
         "REPAIRS",
         "Roof needed some urgent repairs",
         "",
-        [tenant1, tenant2]
+        [tenant1.address, tenant2.address]
     )
+
+    console.log(amount,
+        BigInt(Math.floor(new Date().getTime() / 1000)),
+        "REPAIRS",
+        "Roof needed some urgent repairs",
+        "",
+        [tenant1.address, tenant2.address])
 
     // tx = await manager.connect(tenant1).getTenantUtilityExpenses(tenant1);
     // console.log(tx);
