@@ -46,6 +46,7 @@ export default function AdminUtilityExpenses() {
     const [description, setDescription] = useState<string>("");
     const [selectedTenants, setSelectedTenants] = useState<string[]>([])
     const [tenantAddresses, setTenantAddresses] = useState<string[]>([]);
+    const [tenantNames, setTenantNames] = useState<string[]>([]);
 
     // Filter states
     const [searchTerm, setSearchTerm] = useState("");
@@ -88,7 +89,9 @@ export default function AdminUtilityExpenses() {
         const fetchTenants = async () => {
             const tenants = await getTenants();
             const addresses = tenants.map((t) => t.address);
+            const names = tenants.map((t) => t.name);
             setTenantAddresses(addresses);
+            setTenantNames(names);
         };
 
         fetchTenants();
@@ -155,6 +158,20 @@ export default function AdminUtilityExpenses() {
         console.log("Opening file picker...");
         openFilePicker(); // This shows the file dialog
     }
+
+    const [showTooltip, setShowTooltip] = useState(false);
+    const hoverTimeout = useRef(null);
+
+    const handleMouseEnter = () => {
+        hoverTimeout.current = setTimeout(() => {
+        setShowTooltip(true);
+        }, 1000); // 2 second delay
+    };
+
+    const handleMouseLeave = () => {
+        clearTimeout(hoverTimeout.current); // cancel if not completed
+        setShowTooltip(false); // hide instantly
+    };
 
     const applyFilters = () => {
         if (!utilityExpenses) return;
@@ -322,7 +339,7 @@ export default function AdminUtilityExpenses() {
                                                         ? "Deselect All"
                                                         : "Select All"}
                                                 </SelectItem>
-                                                {tenantAddresses.map((address) => (
+                                                {tenantAddresses.map((address, index) => (
                                                     <SelectItem key={address} value={address}>
                                                         <div className="flex items-center gap-2">
                                                             <input
@@ -331,7 +348,21 @@ export default function AdminUtilityExpenses() {
                                                                 checked={selectedTenants.includes(address)}
                                                                 className="h-4 w-4"
                                                             />
-                                                            <span>{address}</span>
+                                                            <span className="flex overflow-visible">
+                                                                <span className="w-60 truncate">{tenantNames[index]}</span>
+                                                                <span
+                                                                    className="relative group cursor-default"
+                                                                    onMouseEnter={handleMouseEnter}
+                                                                    onMouseLeave={handleMouseLeave}
+                                                                >
+                                                                    <span className="truncate">{address.substring(0, 6)}...{address.substring(address.length - 4)}</span>
+                                                                    {showTooltip && (
+                                                                        <span className="absolute bottom-full left-0 -translate-x-[50%] mt-1 w-max max-w-xs rounded bg-black text-white text-xs px-2 py-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none">
+                                                                        {address}
+                                                                        </span>
+                                                                    )}
+                                                                </span>
+                                                            </span>
                                                         </div>
                                                     </SelectItem>
                                                 ))}
