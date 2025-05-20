@@ -2,7 +2,73 @@ import hardhat from "hardhat";
 const { ethers } = hardhat;
 import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string';
 import { GenerateMeasurements } from "./MeasurementGeneration.js";
+import { readFile } from 'fs/promises';
 
+export async function putPDFToIPFS(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    // Configure for CIDv1
+    const params = new URLSearchParams();
+    params.append("cid-version", "1"); // Force CIDv1
+    params.append("hash", "sha2-256"); // Ensure SHA-256 hash
+
+    try {
+        const response = await fetch(
+            `http://127.0.0.1:5001/api/v0/add?${params.toString()}`,
+            {
+                method: "POST",
+                body: formData
+            }
+        );
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`IPFS add failed: ${error}`);
+        }
+
+        const result = await response.json();
+        return result.Hash; // This will now be a bafy... CID
+    } catch (error) {
+        console.error("IPFS put error:", error);
+        throw error;
+    }
+}
+// export async function putPDFToIPFS(
+//     file
+// ) {
+//     const formData = new FormData();
+//     formData.append("data", file);
+
+//     // Configure query parameters
+//     const params = new URLSearchParams();
+//     params.set("cid-codec", "raw");
+//     params.set("mhtype", "sha2-256");
+//     params.set("pin", true);
+
+//     try {
+//         const response = await fetch(
+//             `http://127.0.0.1:5001/api/v0/block/put?${params.toString()}`,
+//             {
+//                 method: "POST",
+//                 body: formData,
+//                 // Let browser set Content-Type with boundary
+//                 headers: {},
+//             }
+//         );
+
+//         if (!response.ok) {
+//             const error = await response.text();
+//             throw new Error(`IPFS block/put failed: ${error}`);
+//         }
+
+//         const { Key: cid } = await response.json();
+//         return cid;
+//     } catch (error) {
+//         console.error("IPFS put error:", error);
+//         throw error;
+//     }
+// }
 
 async function addAndRecord(contract, meter, data) {
     // Convert the data object to a JSON string
@@ -174,7 +240,7 @@ async function main() {
     // Create some measurements:
     // Meter1
     const startDate = new Date(2025, 0, 1, 1); // Jan 1, 2025, 01:00:00
-    const endDate = new Date(2025, 2, 31, 1);   // Feb 31, 2025, 01:00:00
+    const endDate = new Date(2025, 1, 31, 1);   // Feb 31, 2025, 01:00:00
     const meter1Id = "SMTR-0001";
     const meter2Id = "SMTR-0002";
     const meter1Measurements = await GenerateMeasurements(startDate, endDate, meter1Id);
@@ -213,26 +279,25 @@ async function main() {
     console.log("Failed Uploads: ", failedUploads.length);
 
 
-    // await addAndRecord(manager, meter1, day1);
-    // await addAndRecord(manager, meter1, day2);
-    // await addAndRecord(manager, meter1, day3);
-
-    // await addAndRecord(manager, meter2, day1);
-    // await addAndRecord(manager, meter2, day2);
-    // await addAndRecord(manager, meter2, day3);
-
-
-    // let readTx = await manager.connect(tenant1).getDailyUsage(meter1);
-    // console.log("Daily Usage: ", readTx);
-
-    // tx = await manager.connect(master).getUtilityExpenses();
-    // console.log(tx);
-
-    // tx = await manager.connect(tenant1).getTenantUtilityExpenses(tenant1);
-    // console.log(tx);
-
-
     const amount = ethers.parseEther("150", 18);
+
+    // Usage example:
+    const pdfPath = new URL('../scripts/Fictional_Roof_Repair_Invoice.pdf', import.meta.url);
+    let pdfIPFSCID = ""
+
+    try {
+        const pdfData = await readFile(pdfPath);
+        console.log("FileSize: ", pdfData.length, " bytes")
+        // Create a File object with proper metadata
+        const pdfFile = new File([pdfData], 'invoice.pdf', { type: 'application/pdf' });
+        console.log("FileSize: ", pdfFile.size, " bytes")
+        pdfIPFSCID = await putPDFToIPFS(pdfFile);
+        console.log("PDF uploaded to IPFS with CID:", pdfIPFSCID);
+    } catch (err) {
+        console.error('Error:', err);
+    }
+
+
 
     // Now a landlord wants to create an expense
     tx = await manager.connect(master).recordUtilityExpense(
@@ -240,15 +305,16 @@ async function main() {
         BigInt(Math.floor(new Date().getTime() / 1000)),
         "REPAIRS",
         "Roof needed some urgent repairs",
-        "",
+        pdfIPFSCID,
         [tenant1.address, tenant2.address]
     )
 
-    console.log(amount,
+    console.log(
+        amount,
         BigInt(Math.floor(new Date().getTime() / 1000)),
         "REPAIRS",
         "Roof needed some urgent repairs",
-        "",
+        pdfIPFSCID,
         [tenant1.address, tenant2.address])
 
     // tx = await manager.connect(tenant1).getTenantUtilityExpenses(tenant1);
