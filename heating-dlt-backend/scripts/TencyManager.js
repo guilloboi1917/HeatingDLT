@@ -1,13 +1,8 @@
 import hardhat from "hardhat";
 const { ethers } = hardhat;
-import { createHelia } from 'helia';
-import { unixfs } from '@helia/unixfs';
 import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string';
 import { GenerateMeasurements } from "./MeasurementGeneration.js";
 
-
-const helia = await createHelia();
-const fs = unixfs(helia);
 
 async function addAndRecord(contract, meter, data) {
     // Convert the data object to a JSON string
@@ -159,10 +154,10 @@ async function main() {
     console.log("Only Added Tenant 3: ", tenant3.address);
 
     // Now let's mint some tokens and interact with the contract
-    tx = await tncyContract.connect(master).mint(master, ethers.parseUnits("1000", 18));
-    tx = await tncyContract.connect(master).mint(tenant1, ethers.parseUnits("1000", 18));
-    tx = await tncyContract.connect(master).mint(tenant2, ethers.parseUnits("1000", 18));
-    tx = await tncyContract.connect(master).mint(tenant3, ethers.parseUnits("1000", 18));
+    tx = await tncyContract.connect(master).mint(master, ethers.parseUnits("3000", 18));
+    tx = await tncyContract.connect(master).mint(tenant1, ethers.parseUnits("10000", 18));
+    tx = await tncyContract.connect(master).mint(tenant2, ethers.parseUnits("10000", 18));
+    tx = await tncyContract.connect(master).mint(tenant3, ethers.parseUnits("10000", 18));
 
     tx = await manager.connect(master).getTokenBalance();
     console.log("Master token balance: ", tx);
@@ -179,7 +174,7 @@ async function main() {
     // Create some measurements:
     // Meter1
     const startDate = new Date(2025, 0, 1, 1); // Jan 1, 2025, 01:00:00
-    const endDate = new Date(2025, 0, 14, 1);   // Jan 14, 2025, 01:00:00
+    const endDate = new Date(2025, 2, 31, 1);   // Feb 31, 2025, 01:00:00
     const meter1Id = "SMTR-0001";
     const meter2Id = "SMTR-0002";
     const meter1Measurements = await GenerateMeasurements(startDate, endDate, meter1Id);
