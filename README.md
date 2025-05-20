@@ -1,8 +1,42 @@
-**Blockchain Heating App**
+# Blockchain Heating App
 
-heating-dlt-frontend is the current frontend, initially developed with v0 and updated according to requirements.
+heating-dlt-frontend is the current front-end, initially developed with v0 and updated according to requirements. heating-dlt-backend is the current back-end.
 
 ## Guide
+
+- Set up IPFS
+  - Install Kubo (IPFS Node) (<https://dist.ipfs.tech/#kubo>)
+  - Add installed location as ``$PATH``
+  - test installation with ``ipfs --version`` in cmd
+  - do ``ipfs init`` and open newly created folder in ``C:\Users\<your-user-here>\.ipfs``
+  - Configure ``~/.ipfs/config`` and add the following lines in the first "API" property:
+  
+    ```json
+    "HTTPHeaders": {
+          "Access-Control-Allow-Credentials": [
+            "true"
+          ],
+          "Access-Control-Allow-Headers": [
+            "Authorization"
+          ],
+          "Access-Control-Allow-Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "OPTIONS"
+          ],
+          "Access-Control-Allow-Origin": [
+            "http://localhost:3500"
+          ],
+          "Access-Control-Expose-Headers": [
+            "Location",
+            "Content-Type"
+          ]
+        }
+    ```
+  
+  - Start the ipfs node with ``ipfs daemon``
 
 - Install MetaMask browser extension
 - Create new Wallet
@@ -13,10 +47,11 @@ heating-dlt-frontend is the current frontend, initially developed with v0 and up
   - Add Symbol: TNCY
   - Save
 - Switch to created testing network
-- Start back end in terminal and run script
+- Start back-end in terminal and run script
+  - ``npm install``
   - ``npx hardhat node``
   - ``npx hardhat run ./scripts/TencyManager.js --network localhost``
-- Start front end
+- Start front-end
   - ``npm install``
   - ``npm run dev``
 - open <http://localhost:3500> in browser
@@ -26,38 +61,4 @@ heating-dlt-frontend is the current frontend, initially developed with v0 and up
     - example: ``0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80``
 - optional:
   - rename account to match function
-  - add second account (order: master, meter 1, meter 2, tenant 1, tenant 2)
-
-- Finally:
-  - Install Kubo (IPFS Node) (<https://dist.ipfs.tech/#kubo>)
-  - Add installed location as ``$PATH``
-  - test installation with ``ipfs --version`` in cmd
-  - do ``ipfs init`` and open newly created folder in ``C:\Users\<your-user-here>\.ipfs``
-  - Configure ``~/.ipfs/config`` and add the following lines in the first "API" property:
-  
-  ```json
-  "HTTPHeaders": {
-        "Access-Control-Allow-Credentials": [
-          "true"
-        ],
-        "Access-Control-Allow-Headers": [
-          "Authorization"
-        ],
-        "Access-Control-Allow-Methods": [
-          "GET",
-          "POST",
-          "PUT",
-          "DELETE",
-          "OPTIONS"
-        ],
-        "Access-Control-Allow-Origin": [
-          "http://localhost:3500"
-        ],
-        "Access-Control-Expose-Headers": [
-          "Location",
-          "Content-Type"
-        ]
-      }
-  ```
-  
-  - Start the ipfs node with ``ipfs daemon``
+  - get account order from ``LocalDevAccounts.txt`` in the back-end folder

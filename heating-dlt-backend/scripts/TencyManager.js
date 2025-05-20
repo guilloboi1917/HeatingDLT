@@ -34,41 +34,6 @@ export async function putPDFToIPFS(file) {
         throw error;
     }
 }
-// export async function putPDFToIPFS(
-//     file
-// ) {
-//     const formData = new FormData();
-//     formData.append("data", file);
-
-//     // Configure query parameters
-//     const params = new URLSearchParams();
-//     params.set("cid-codec", "raw");
-//     params.set("mhtype", "sha2-256");
-//     params.set("pin", true);
-
-//     try {
-//         const response = await fetch(
-//             `http://127.0.0.1:5001/api/v0/block/put?${params.toString()}`,
-//             {
-//                 method: "POST",
-//                 body: formData,
-//                 // Let browser set Content-Type with boundary
-//                 headers: {},
-//             }
-//         );
-
-//         if (!response.ok) {
-//             const error = await response.text();
-//             throw new Error(`IPFS block/put failed: ${error}`);
-//         }
-
-//         const { Key: cid } = await response.json();
-//         return cid;
-//     } catch (error) {
-//         console.error("IPFS put error:", error);
-//         throw error;
-//     }
-// }
 
 async function addAndRecord(contract, meter, data) {
     // Convert the data object to a JSON string
