@@ -520,28 +520,4 @@ export const useContractStore = create<ContractState>((set, get) => ({
 
     return;
   },
-
-  //   mintToken: async (amount: number) => {
-  //     const { contract, account } = get();
-  //     if (!contract || !account) {
-  //       toast({
-  //         title: "Not connected",
-  //         description: "Connect wallet first.",
-  //         variant: "destructive",
-  //       });
-  //       return;
-  //     }
-  //     try {
-  //       const tx = await contract.mintToken(account, amount);
-  //       await tx.wait();
-  //       toast({ title: "Success", description: "Tokens minted!" });
-  //     } catch (err) {
-  //       console.error(err);
-  //       toast({
-  //         title: "Error",
-  //         description: "Failed to mint tokens.",
-  //         variant: "destructive",
-  //       });
-  //     }
-  //   },
 }));
