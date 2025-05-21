@@ -1,7 +1,5 @@
 # Blockchain Heating App
 
-heating-dlt-frontend is the current front-end, initially developed with v0 and updated according to requirements. heating-dlt-backend is the current back-end.
-
 ## Guide
 
 - Set up IPFS
@@ -27,7 +25,10 @@ heating-dlt-frontend is the current front-end, initially developed with v0 and u
             "OPTIONS"
           ],
           "Access-Control-Allow-Origin": [
-            "http://localhost:3500"
+            "http://localhost:3500",
+            "http://127.0.0.1:3500",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000"
           ],
           "Access-Control-Expose-Headers": [
             "Location",
