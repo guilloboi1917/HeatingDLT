@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useContractStore } from "@/store/useContractStore"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,7 +27,6 @@ import { ethers } from "ethers"
 
 export default function TenantManagement() {
   const { getTenants, addTenant, removeTenant, assignSmartMeter, getSmartMeters } = useContractStore()
-  const { toast } = useToast()
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [newTenantAddress, setNewTenantAddress] = useState("")
   const [newTenantName, setNewTenantName] = useState("")
@@ -60,11 +59,9 @@ export default function TenantManagement() {
       setTenants(fetchedTenants)
     } catch (error) {
       console.error("Error fetching tenants:", error)
-      toast({
-        title: "Error fetching tenants",
-        description: "Could not retrieve tenant information from the blockchain",
-        variant: "destructive",
-      })
+      toast.error(
+        "Error fetching tenants",
+        { description: "Could not retrieve tenant information from the blockchain" })
     } finally {
       setIsLoading(false)
     }
@@ -88,26 +85,26 @@ export default function TenantManagement() {
         setNewTenantName("")
         setDialogOpen(false)
 
-        toast({
-          title: "Tenant added",
-          description: `${newTenantName} has been added as a tenant`,
-        })
+        toast.success(
+          "Tenant added",
+          {
+            description: `${newTenantName} has been added as a tenant`,
+          })
 
         // Refresh the tenants list
         await fetchTenants()
       } else {
-        toast({
-          title: "Error adding tenant",
-          description: "Failed to add the tenant to the blockchain",
-          variant: "destructive",
-        })
+        toast.error(
+          "Error adding tenant",
+          {
+            description: "Failed to add the tenant to the blockchain"
+          })
       }
     } catch (error) {
       console.error("Error adding tenant:", error)
-      toast({
-        title: "Error adding tenant",
-        description: "Failed to add the tenant to the blockchain",
-        variant: "destructive",
+      toast.error(
+        "Error adding tenant", {
+        description: "Failed to add the tenant to the blockchain"
       })
     } finally {
       setIsSubmitting(false)
@@ -120,27 +117,27 @@ export default function TenantManagement() {
       const success = await removeTenant(address)
 
       if (success) {
-        toast({
-          title: "Tenant removed",
-          description: `${address} has been removed as a tenant`,
-        })
+        toast.success(
+          "Tenant removed",
+          {
+            description: `${address} has been removed as a tenant`,
+          })
 
         // Refresh the tenants list
         await fetchTenants()
       } else {
-        toast({
-          title: "Error removing tenant",
-          description: "Failed to remove the tenant from the blockchain",
-          variant: "destructive",
+        toast.error(
+          "Error removing tenant", {
+          description: "Failed to remove the tenant from the blockchain"
         })
       }
     } catch (error) {
       console.error("Error removing tenant:", error)
-      toast({
-        title: "Error removing tenant",
-        description: "Failed to remove the tenant from the blockchain",
-        variant: "destructive",
-      })
+      toast.error(
+        "Error removing tenant",
+        {
+          description: "Failed to remove the tenant from the blockchain"
+        })
     }
   }
 
@@ -154,34 +151,27 @@ export default function TenantManagement() {
     try {
       setIsSubmitting(true);
 
-      const success = await assignSmartMeter(tenantAddress, smartMeterAddress);
+      const tx = await assignSmartMeter(tenantAddress, smartMeterAddress);
 
-      if (success) {
-        setSelectedSmartMeter("");
-        setAssignmentDialogOpen(false);
-        toast({
-          title: "SmartMeter Assigned",
-          description: `SmartMeter Assignment Successful`,
+      toast.success(
+        "SmartMeter Assigned",
+        {
+          description: `SmartMeter Assignment Successful`
         })
 
-        // Refresh the tenants list
-        await fetchTenants()
-      } else {
-        toast({
-          title: "Error Assigning SmartMeter",
-          description: "Failed to assign SmartMeter",
-          variant: "destructive",
-        })
-      }
     } catch (error) {
       console.error("Error Assigning SmartMeter:", error)
-      toast({
-        title: "Error Assigning SmartMeter",
-        description: "Failed to assign SmartMeter",
-        variant: "destructive",
-      })
+      toast.error(
+        "Error Assigning SmartMeter",
+        {
+          description: "Failed to assign SmartMeter"
+        })
     } finally {
+      setAssignmentDialogOpen(false);
       setIsSubmitting(false)
+      setSelectedSmartMeter("");
+      // Refresh the tenants list
+      await fetchTenants()
     }
   }
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useContractStore } from "@/store/useContractStore"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,7 +23,6 @@ import { SmartMeter } from "@/types/types"
 
 export default function SmartMeterManagement() {
   const { getSmartMeters, registerSmartMeter, getSmartMeterInfo } = useContractStore()
-  const { toast } = useToast()
   const [meters, setMeters] = useState<SmartMeter[]>([])
   const [newMeterAddress, setNewMeterAddress] = useState("")
   const [newSmartMeterId, setNewSmartMeterId] = useState("")
@@ -44,10 +43,8 @@ export default function SmartMeterManagement() {
       setMeters(fetchedMeters)
     } catch (error) {
       console.error("Error fetching smart meters:", error)
-      toast({
-        title: "Error fetching smart meters",
-        description: "Could not retrieve smart meter information from the blockchain",
-        variant: "destructive",
+      toast.error("Error fetching smart meters", {
+        description: "Could not retrieve smart meter information from the blockchain"
       })
     } finally {
       setIsLoading(false)
@@ -77,33 +74,37 @@ export default function SmartMeterManagement() {
 
         console.log("Closing Dialog")
 
-        toast({
-          title: "Smart meter added",
-          description: `Smart meter for ${newSmartMeterId} has been added`,
+        toast.success("Smart meter added", {
+          description: `Smart meter for ${newSmartMeterId} has been added`
         })
 
         // Refresh the meters list
         await fetchSmartMeters()
       } else {
-        toast({
-          title: "Error adding smart meter",
-          description: "Failed to add the smart meter to the blockchain",
-          variant: "destructive",
-        })
+        toast.error(
+          "Error adding smart meter",
+          {
+            description: "Failed to add the smart meter to the blockchain"
+          })
       }
     } catch (error) {
       console.error("Error adding smart meter:", error)
-      toast({
-        title: "Error adding smart meter",
-        description: "Failed to add the smart meter to the blockchain",
-        variant: "destructive",
-      })
+      toast.error(
+        "Error adding smart meter",
+        {
+          description: "Failed to add the smart meter to the blockchain"
+        })
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleRemoveSmartMeter = async (id: number, location: string) => {
+    toast.error(
+      "Not implemented yet*",
+      {
+        description: "Failed to remove the smart meter"
+      })
     return false;
     try {
       setIsLoading(true)

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useContractStore } from "@/store/useContractStore"
-import { useToast } from "@/components/ui/use-toast"
+import {toast} from "sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, Flame, House } from "lucide-react"
@@ -15,7 +15,6 @@ import { formatPhoneNumber } from "@/lib/utils"
 
 export default function TenantDashboard() {
   const { account, tokenBalance, fullName, ownerContactInfo } = useContractStore()
-  const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("usage")
 
   const formattedTokenBalance = Number(

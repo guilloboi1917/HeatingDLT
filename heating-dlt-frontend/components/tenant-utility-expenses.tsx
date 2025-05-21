@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useContractStore } from "@/store/useContractStore"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -23,7 +23,6 @@ export default function TenantUtilityExpenses() {
     const [utilityExpenses, setUtilityExpenses] = useState<UtilityExpense[] | null>([]);
     const [filteredExpenses, setFilteredExpenses] = useState<UtilityExpense[] | null>([]);
     const [isLoading, setIsLoading] = useState(true)
-    const { toast } = useToast();
     const [totalExpenses, setTotalExpenses] = useState<string | null>(null)
 
     // Filter states
@@ -44,11 +43,11 @@ export default function TenantUtilityExpenses() {
         }
         catch (error) {
             console.error("Error fetching Utility Expenses");
-            toast({
-                title: "Error fetching Utility Expenses",
-                description: "Could not retrieve Utility Expenses from the blockchain",
-                variant: "destructive",
-            })
+            toast.error(
+                "Error fetching Utility Expenses",
+                {
+                    description: "Could not retrieve Utility Expenses from the blockchain"
+                })
         } finally {
             setIsLoading(false)
         }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useContractStore } from "@/store/useContractStore"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -34,7 +34,6 @@ export default function AdminUtilityExpenses() {
     const [utilityExpenses, setUtilityExpenses] = useState<UtilityExpense[] | null>([]);
     const [filteredExpenses, setFilteredExpenses] = useState<UtilityExpense[] | null>([]);
     const [isLoading, setIsLoading] = useState(true)
-    const { toast } = useToast();
     const [totalExpenses, setTotalExpenses] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [dialogOpen, setDialogOpen] = useState(false)
@@ -124,11 +123,8 @@ export default function AdminUtilityExpenses() {
         }
         catch (error) {
             console.error("Error fetching Utility Expenses");
-            toast({
-                title: "Error fetching Utility Expenses",
-                description: "Could not retrieve Utility Expenses from the blockchain",
-                variant: "destructive",
-            })
+            toast.error(
+                "Error fetching Utility Expenses")
         } finally {
             setIsLoading(false)
         }
@@ -164,7 +160,7 @@ export default function AdminUtilityExpenses() {
 
     const handleMouseEnter = () => {
         hoverTimeout.current = setTimeout(() => {
-        setShowTooltip(true);
+            setShowTooltip(true);
         }, 1000); // 2 second delay
     };
 
@@ -358,7 +354,7 @@ export default function AdminUtilityExpenses() {
                                                                     <span className="truncate">{address.substring(0, 6)}...{address.substring(address.length - 4)}</span>
                                                                     {showTooltip && (
                                                                         <span className="absolute bottom-full left-0 -translate-x-[50%] mt-1 w-max max-w-xs rounded bg-black text-white text-xs px-2 py-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none">
-                                                                        {address}
+                                                                            {address}
                                                                         </span>
                                                                     )}
                                                                 </span>

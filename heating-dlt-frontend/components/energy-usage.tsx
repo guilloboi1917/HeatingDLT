@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react"
 import { useContractStore } from "@/store/useContractStore"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ChartData, DailyMeasurementData, HourlyData } from "@/types/types"
@@ -22,7 +22,6 @@ import { fetchIPFSMeasurementData } from "@/lib/ipfs"
 
 export default function EnergyUsage() {
   const { getEnergyUsage, account } = useContractStore()
-  const { toast } = useToast()
   const [usageData, setUsageData] = useState<DailyMeasurementData[] | null>(new Array<DailyMeasurementData>())
   const [selectedDate, setSelectedDate] = useState<ChartData | null>(null);
   const [hourlyData, setHourlyData] = useState<HourlyData[]>([]);
@@ -87,11 +86,11 @@ export default function EnergyUsage() {
 
     } catch (error) {
       console.error("Error fetching energy usage:", error)
-      toast({
-        title: "Error fetching energy usage",
-        description: "Could not retrieve energy usage data from the blockchain",
-        variant: "destructive",
-      })
+      toast.error(
+        "Error fetching energy usage", {
+        description: "Could not retrieve energy usage data from the blockchain"
+      }
+      )
     } finally {
       setIsLoading(false)
     }

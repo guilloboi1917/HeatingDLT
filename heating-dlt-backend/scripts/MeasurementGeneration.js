@@ -21,7 +21,7 @@ export async function GenerateMeasurements(startDate, endDate, meterID) {
         dayEnd.setDate(dayEnd.getDate() + 1); // Move to next day
 
         while (currentDate < dayEnd && currentDate < endDate) {
-            const value = (Math.random() * 4.0).toFixed(1);
+            const value = (Math.random() * 3.0).toFixed(1);
             dayMeasurement.measurements.push({
                 "timestamp": new Date(currentDate), // Clone to avoid reference issues
                 "value": Number(value),

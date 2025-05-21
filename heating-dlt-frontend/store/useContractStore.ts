@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { ethers, BigNumberish, BigNumber } from "ethers";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import TencyManagerAbi from "@/contracts/TencyManager.json";
 import TNCYAbi from "@/contracts/TNCY.json";
 import {
@@ -19,6 +19,8 @@ import {
 } from "@/lib/parseTypes";
 import { add } from "date-fns";
 import { putPDFToIPFSHelper } from "@/lib/ipfs";
+import { totalmem } from "os";
+import { Description } from "@radix-ui/react-toast";
 
 const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
@@ -89,10 +91,8 @@ export const useContractStore = create<ContractState>((set, get) => ({
 
   connectWallet: async () => {
     if (typeof window === "undefined" || !window.ethereum) {
-      toast({
-        title: "No Wallet",
+      toast.error("No Wallet", {
         description: "Install MetaMask",
-        variant: "destructive",
       });
       return;
     }
@@ -148,14 +148,10 @@ export const useContractStore = create<ContractState>((set, get) => ({
         ownerContactInfo,
       });
 
-      toast({ title: "Connected", description: "Wallet connected!" });
+      toast.success("Connected");
     } catch (err) {
       console.error(err);
-      toast({
-        title: "Connection Failed",
-        description: "Could not connect wallet",
-        variant: "destructive",
-      });
+      toast.error("Connection Failed");
     }
   },
 
@@ -175,17 +171,13 @@ export const useContractStore = create<ContractState>((set, get) => ({
       ownerContactInfo: null,
     });
 
-    toast({ title: "Disconnected", description: "Wallet disconnected." });
+    toast.info("Disconnected");
   },
 
   getTenants: async (): Promise<Tenant[]> => {
     const { contract } = get();
     if (!contract) {
-      toast({
-        title: "Not connected",
-        description: "Connect wallet first.",
-        variant: "destructive",
-      });
+      toast.error("Not connected, connect your wallet");
       return [];
     }
     try {
@@ -205,10 +197,9 @@ export const useContractStore = create<ContractState>((set, get) => ({
       return tenants;
     } catch (err) {
       console.error(err);
-      toast({
-        title: "Error",
+
+      toast.error("Error", {
         description: "Failed to fetch tenants.",
-        variant: "destructive",
       });
       return [];
     }
@@ -217,11 +208,7 @@ export const useContractStore = create<ContractState>((set, get) => ({
   addTenant: async (address: string, name: string): Promise<boolean> => {
     const { contract } = get();
     if (!contract) {
-      toast({
-        title: "Not connected",
-        description: "Connect wallet first.",
-        variant: "destructive",
-      });
+      toast.error("Not connected", { description: "Connect wallet first." });
       return false;
     }
 
@@ -237,11 +224,8 @@ export const useContractStore = create<ContractState>((set, get) => ({
   removeTenant: async (address: string): Promise<boolean> => {
     const { contract } = get();
     if (!contract) {
-      toast({
-        title: "Not connected",
-        description: "Connect wallet first.",
-        variant: "destructive",
-      });
+      toast.error("Not connected", { description: "Connect wallet first." });
+
       return false;
     }
 
@@ -257,11 +241,8 @@ export const useContractStore = create<ContractState>((set, get) => ({
   getSmartMeters: async (): Promise<SmartMeter[]> => {
     const { contract } = get();
     if (!contract) {
-      toast({
-        title: "Not connected",
-        description: "Connect wallet first.",
-        variant: "destructive",
-      });
+      toast.error("Not connected", { description: "Connect wallet first." });
+
       // return empty array
       return [] as SmartMeter[];
     }
@@ -311,11 +292,8 @@ export const useContractStore = create<ContractState>((set, get) => ({
   ): Promise<boolean> => {
     const { contract } = get();
     if (!contract) {
-      toast({
-        title: "Not connected",
-        description: "Connect wallet first.",
-        variant: "destructive",
-      });
+      toast.error("Not connected", { description: "Connect wallet first." });
+
       // return empty array
       return false;
     }
@@ -339,10 +317,8 @@ export const useContractStore = create<ContractState>((set, get) => ({
     } catch (error) {
       console.error("Error Registering SmartMeter:", error);
 
-      toast({
-        title: "Smart Meter Registration Error",
+      toast.error("Smart Meter Registration Error", {
         description: "Smart Meter Registration Failed",
-        variant: "destructive",
       });
 
       return false;
@@ -355,11 +331,8 @@ export const useContractStore = create<ContractState>((set, get) => ({
   ): Promise<void> => {
     const { contract } = get();
     if (!contract) {
-      toast({
-        title: "Not connected",
-        description: "Connect wallet first.",
-        variant: "destructive",
-      });
+      toast.error("Not connected", { description: "Connect wallet first." });
+
       return;
     }
     console.log(
@@ -383,11 +356,8 @@ export const useContractStore = create<ContractState>((set, get) => ({
   getEnergyUsage: async (address: string): Promise<DailyMeasurementData[]> => {
     const { contract } = get();
     if (!contract) {
-      toast({
-        title: "Not connected",
-        description: "Connect wallet first.",
-        variant: "destructive",
-      });
+      toast.error("Not connected", { description: "Connect wallet first." });
+
       // return empty array
       return [] as DailyMeasurementData[];
     }
@@ -419,19 +389,14 @@ export const useContractStore = create<ContractState>((set, get) => ({
   getUtilityExpenses: async (): Promise<UtilityExpense[]> => {
     const { contract } = get();
     if (!contract) {
-      toast({
-        title: "Not connected",
-        description: "Connect wallet first.",
-        variant: "destructive",
-      });
+      toast.error("Not connected", { description: "Connect wallet first." });
+
       // return empty array
       return [] as UtilityExpense[];
     }
 
     try {
       const rawUtiltyExpenses = await contract.getUtilityExpenses();
-
-      console.log("Fetched utilityExpenses: ", rawUtiltyExpenses);
 
       return rawUtiltyExpenses.map(parseUtilityExpense);
     } catch (err) {
@@ -445,11 +410,8 @@ export const useContractStore = create<ContractState>((set, get) => ({
   ): Promise<UtilityExpense[]> => {
     const { contract, account } = get();
     if (!contract || !account) {
-      toast({
-        title: "Not connected",
-        description: "Connect wallet first.",
-        variant: "destructive",
-      });
+      toast.error("Not connected", { description: "Connect wallet first." });
+
       // return empty array
       return [] as UtilityExpense[];
     }
@@ -478,11 +440,8 @@ export const useContractStore = create<ContractState>((set, get) => ({
   ): Promise<void> => {
     const { contract, account } = get();
     if (!contract) {
-      toast({
-        title: "Not connected",
-        description: "Connect wallet first.",
-        variant: "destructive",
-      });
+      toast.error("Not connected", { description: "Connect wallet first." });
+
       return;
     }
 

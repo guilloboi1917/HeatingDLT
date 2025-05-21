@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useContractStore } from "@/store/useContractStore"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { formatUnits, ethers } from "ethers";
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,6 @@ import { Flame } from "lucide-react"
 
 export default function TokenBalance() {
   const { tokenBalance } = useContractStore()
-  const { toast } = useToast()
   const [topUpAmount, setTopUpAmount] = useState<number>(100)
   const [isProcessing, setIsProcessing] = useState(false)
 
@@ -22,9 +21,9 @@ export default function TokenBalance() {
       "ether"
     )
   ).toFixed(2);
-  
+
   const handleTopUp = async () => {
-    console.log("Topped up")
+    toast.success("Topped up (MOCK)", { description: "This functionality is mocked" })
     return
     // if (!topUpAmount || topUpAmount <= 0) {
     //   toast({
