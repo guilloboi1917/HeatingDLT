@@ -1,5 +1,24 @@
 # Blockchain Heating App
 
+A blockchain solution for real estate.
+Using smart meters and simple billing mechanisms, tenants can keep an eye on their exact
+consumption and services at all times. Tokenization makes it possible to budget expenditures
+and provides incentives to save energy.
+
+• Hardhat (Ethereum development environment)
+
+• Kubo (IPFS implementation)
+
+• Solidity Smart Contracts
+
+• NextJS React Framework
+
+• Ethers.js library
+
+• MetaMask
+
+![Alt text](./heating-dlt-frontend/public/TNCY_screenshot.png "WebApp Interface")
+
 ## Guide
 
 - Set up IPFS
@@ -54,8 +73,8 @@
   - ``npx hardhat run ./scripts/TencyManager.js --network localhost``
 - Start front-end
   - ``npm install``
-  - ``npm run dev``
-- open <http://localhost:3500> in browser
+  - ``npm run dev`` or ``npm run build; npm run start`` (for production optimized build)
+- open <http://localhost:3500> in browser (port 3000 for production build)
 - Add account (first account is admin/landlord)
   - Select private key
   - Paste a private key from executed script
